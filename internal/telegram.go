@@ -21,7 +21,7 @@ type (
 	}
 )
 
-func NewBot(token string, log Logger) (*Bot, error) {
+func NewBot(token string, statusJob func(ctx context.Context) error, log Logger) (*Bot, error) {
 	pref := telebot.Settings{
 		Token: token,
 		Poller: &telebot.LongPoller{
@@ -34,7 +34,7 @@ func NewBot(token string, log Logger) (*Bot, error) {
 		return nil, fmt.Errorf("create bot: %w", err)
 	}
 
-	initBotHandlers(b, log)
+	initBotHandlers(b, statusJob, log)
 
 	return &Bot{
 		bot: b,
@@ -61,9 +61,21 @@ func (p *MessagePublisher) Publish(ctx context.Context, msg string) error {
 	return err
 }
 
-func initBotHandlers(b *telebot.Bot, log Logger) {
+func initBotHandlers(b *telebot.Bot, statusJob func(ctx context.Context) error, log Logger) {
 	b.Handle("/start", func(c telebot.Context) error {
 		log.Info("start command", "chatID", c.Chat().ID)
 		return c.Reply("Hello!")
+	})
+
+	b.Handle("/status", func(c telebot.Context) error {
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+		defer cancel()
+
+		log.Info("status command", "chatID", c.Chat().ID)
+		if err := statusJob(ctx); err != nil {
+			log.Error("failed to run status job", "error", err)
+			return c.Reply(fmt.Sprintf("Error: %v", err))
+		}
+		return nil
 	})
 }

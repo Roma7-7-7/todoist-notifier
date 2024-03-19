@@ -19,6 +19,7 @@ type (
 		ErrorContext(ctx context.Context, msg string, fields ...any)
 
 		Info(msg string, fields ...any)
+		Error(msg string, fields ...any)
 	}
 
 	TodoistClient interface {
@@ -40,6 +41,10 @@ type (
 		Telegram TelegramConfig
 	}
 
+	publisherProxy struct {
+		Publisher
+	}
+
 	App struct {
 		scheduler *Schedule
 		job       *Job
@@ -49,7 +54,10 @@ type (
 )
 
 func NewApp(cfg Config, log Logger) (*App, error) {
-	bot, err := NewBot(cfg.Telegram.Token, log)
+	publisher := &publisherProxy{}
+	job := NewJob(todoist.NewClient(cfg.Todoist.Token, http.DefaultClient, log), publisher, log)
+
+	bot, err := NewBot(cfg.Telegram.Token, job.Run, log)
 	if err != nil {
 		return nil, fmt.Errorf("new bot: %w", err)
 	}
@@ -59,7 +67,7 @@ func NewApp(cfg Config, log Logger) (*App, error) {
 		return nil, fmt.Errorf("parse chat id %q: %w", cfg.Telegram.ChatID, err)
 	}
 
-	publisher := &MessagePublisher{
+	publisher.Publisher = &MessagePublisher{
 		chatID: chatID,
 		bot:    bot.bot,
 		log:    log,
@@ -67,7 +75,7 @@ func NewApp(cfg Config, log Logger) (*App, error) {
 
 	return &App{
 		scheduler: NewScheduler(cfg.Schedule, log),
-		job:       NewJob(todoist.NewClient(cfg.Todoist.Token, http.DefaultClient, log), publisher, log),
+		job:       job,
 		bot:       bot,
 		log:       log,
 	}, nil
