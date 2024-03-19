@@ -21,7 +21,7 @@ type (
 	}
 )
 
-func NewBot(token string, statusJob func(ctx context.Context) error, log Logger) (*Bot, error) {
+func NewBot(token string, statusJob func(ctx context.Context, notifyIfNoTasks bool) error, log Logger) (*Bot, error) {
 	pref := telebot.Settings{
 		Token: token,
 		Poller: &telebot.LongPoller{
@@ -61,7 +61,7 @@ func (p *MessagePublisher) Publish(ctx context.Context, msg string) error {
 	return err
 }
 
-func initBotHandlers(b *telebot.Bot, statusJob func(ctx context.Context) error, log Logger) {
+func initBotHandlers(b *telebot.Bot, statusJob func(ctx context.Context, notifyIfNoTasks bool) error, log Logger) {
 	b.Handle("/start", func(c telebot.Context) error {
 		log.Info("start command", "chatID", c.Chat().ID)
 		return c.Reply("Hello!")
@@ -72,7 +72,7 @@ func initBotHandlers(b *telebot.Bot, statusJob func(ctx context.Context) error, 
 		defer cancel()
 
 		log.Info("status command", "chatID", c.Chat().ID)
-		if err := statusJob(ctx); err != nil {
+		if err := statusJob(ctx, true); err != nil {
 			log.Error("failed to run status job", "error", err)
 			return c.Reply(fmt.Sprintf("Error: %v", err))
 		}

@@ -21,9 +21,11 @@ type (
 	}
 
 	Task struct {
-		ID      string   `json:"id"`
-		Content string   `json:"content"`
-		Due     *TaskDue `json:"due"`
+		ID        string   `json:"id"`
+		ProjectID string   `json:"project_id"`
+		Content   string   `json:"content"`
+		Priority  int      `json:"priority"`
+		Due       *TaskDue `json:"due"`
 	}
 
 	TaskDue struct {

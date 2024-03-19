@@ -92,7 +92,7 @@ func (a *App) Run(ctx context.Context) error {
 		err := a.scheduler.Run(ctx, func() {
 			ctx, cancel := context.WithTimeout(ctx, 1*time.Minute)
 			defer cancel()
-			if err := a.job.Run(ctx); err != nil {
+			if err := a.job.Run(ctx, false); err != nil {
 				a.log.ErrorContext(ctx, "job run", "err", err)
 			}
 		})
