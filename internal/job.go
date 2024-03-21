@@ -64,7 +64,11 @@ func (j *Job) Run(ctx context.Context, notifyIfNoTasks bool) error {
 	j.log.DebugContext(ctx, "tasks to be reminded", "count", len(tasks))
 
 	sort.Slice(tasks, func(i, j int) bool {
-		return tasks[i].Priority > tasks[j].Priority && tasks[i].ProjectID >= tasks[j].ProjectID
+		if tasks[i].Priority > tasks[j].Priority {
+			return true
+		}
+
+		return tasks[i].ProjectID >= tasks[j].ProjectID
 	})
 
 	buff := &bytes.Buffer{}

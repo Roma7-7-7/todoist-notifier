@@ -10,7 +10,7 @@ import (
 	"github.com/Roma7-7-7/todoist-notifier/internal"
 )
 
-var schedule = flag.String("schedule", "0 9-17 * * *", "Cron schedule")
+var schedule = flag.String("schedule", "0 8-23 * * *", "Cron schedule")
 var todoistToken = flag.String("todoist-token", "", "Todoist API token")
 var telegramBotID = flag.String("telegram-bot-id", "", "Telegram bot ID")
 var telegramChatID = flag.String("telegram-chat-id", "", "Telegram chat ID")

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"time"
 )
 
 const baseURL = "https://api.todoist.com/rest"
@@ -33,17 +34,21 @@ type (
 	}
 
 	Client struct {
-		token      string
-		httpClient HTTPClient
-		log        Logger
+		token        string
+		httpClient   HTTPClient
+		retriesCount int
+		retriesDelay time.Duration
+		log          Logger
 	}
 )
 
-func NewClient(token string, httpClient HTTPClient, log Logger) *Client {
+func NewClient(token string, httpClient HTTPClient, retriesCount int, retriesDelay time.Duration, log Logger) *Client {
 	return &Client{
-		token:      token,
-		httpClient: httpClient,
-		log:        log,
+		token:        token,
+		httpClient:   httpClient,
+		retriesCount: retriesCount,
+		retriesDelay: retriesDelay,
+		log:          log,
 	}
 }
 
@@ -67,9 +72,9 @@ func (c *Client) GetTasksV2(ctx context.Context, isCompleted bool) ([]Task, erro
 		slog.Bool("is_completed", isCompleted))
 
 	req = req.WithContext(ctx)
-	resp, err := c.httpClient.Do(req)
+	resp, err := c.doWithRetry(ctx, req)
 	if err != nil {
-		return nil, fmt.Errorf("do request: %w", err)
+		return nil, err
 	}
 	defer resp.Body.Close()
 
@@ -86,4 +91,23 @@ func (c *Client) GetTasksV2(ctx context.Context, isCompleted bool) ([]Task, erro
 	}
 
 	return res, nil
+}
+
+func (c *Client) doWithRetry(ctx context.Context, req *http.Request) (*http.Response, error) {
+	var (
+		resp *http.Response
+		err  error
+	)
+
+	for i := 0; i < c.retriesCount; i++ {
+		resp, err = c.httpClient.Do(req)
+		if err == nil {
+			return resp, nil
+		}
+
+		c.log.WarnContext(ctx, "request failed", "retry", i+1, "error", err)
+		time.Sleep(c.retriesDelay)
+	}
+
+	return nil, fmt.Errorf("do request with %d retries: %w", c.retriesCount, err)
 }

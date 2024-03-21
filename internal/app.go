@@ -55,7 +55,7 @@ type (
 
 func NewApp(cfg Config, log Logger) (*App, error) {
 	publisher := &publisherProxy{}
-	job := NewJob(todoist.NewClient(cfg.Todoist.Token, http.DefaultClient, log), publisher, log)
+	job := NewJob(todoist.NewClient(cfg.Todoist.Token, http.DefaultClient, 5, time.Second, log), publisher, log)
 
 	bot, err := NewBot(cfg.Telegram.Token, job.Run, log)
 	if err != nil {
