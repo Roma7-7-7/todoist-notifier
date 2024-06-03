@@ -7,4 +7,5 @@ docker-build:
 	docker build -t todoist-notifier .
 
 docker-compose:
+	docker-compose down
 	docker-compose up -d
