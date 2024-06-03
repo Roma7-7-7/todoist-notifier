@@ -3,52 +3,17 @@ package main
 import (
 	"context"
 	"errors"
-	"flag"
 	"log/slog"
 	"os"
 
 	"github.com/Roma7-7-7/todoist-notifier/internal"
 )
 
-var schedule = flag.String("schedule", "0 8-23 * * *", "Cron schedule")
-var todoistToken = flag.String("todoist-token", "", "Todoist API token")
-var telegramBotID = flag.String("telegram-bot-id", "", "Telegram bot ID")
-var telegramChatID = flag.String("telegram-chat-id", "", "Telegram chat ID")
+var cfg internal.Config
 
 func main() {
-	flag.Parse()
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 
-	if *todoistToken == "" {
-		logger.Error("todoist token is not set")
-		os.Exit(1)
-	}
-
-	if *telegramBotID == "" {
-		logger.Error("telegram bot ID is not set")
-		os.Exit(1)
-	}
-
-	if *telegramChatID == "" {
-		logger.Error("telegram chat ID is not set")
-		os.Exit(1)
-	}
-
-	if *schedule == "" {
-		logger.Error("cron schedule is not set")
-		os.Exit(1)
-	}
-
-	cfg := internal.Config{
-		Schedule: *schedule,
-		Todoist: internal.TodoistConfig{
-			Token: *todoistToken,
-		},
-		Telegram: internal.TelegramConfig{
-			Token:  *telegramBotID,
-			ChatID: *telegramChatID,
-		},
-	}
 	app, err := internal.NewApp(cfg, logger)
 	if err != nil {
 		logger.Error("new app", "error", err)
@@ -62,4 +27,36 @@ func main() {
 		os.Exit(3)
 	}
 	logger.Info("app stopped")
+}
+
+func init() {
+	var (
+		schedule       string
+		todoistToken   string
+		telegramBotID  string
+		telegramChatID string
+	)
+	if schedule = os.Getenv("SCHEDULE"); schedule == "" {
+		schedule = "0 9-23 * * *"
+	}
+	if todoistToken = os.Getenv("TODOIST_TOKEN"); todoistToken == "" {
+		panic("TODOIST_TOKEN is not set")
+	}
+	if telegramBotID = os.Getenv("TELEGRAM_BOT_ID"); telegramBotID == "" {
+		panic("TELEGRAM_BOT_ID is not set")
+	}
+	if telegramChatID = os.Getenv("TELEGRAM_CHAT_ID"); telegramChatID == "" {
+		panic("TELEGRAM_CHAT_ID is not set")
+	}
+
+	cfg = internal.Config{
+		Schedule: schedule,
+		Todoist: internal.TodoistConfig{
+			Token: todoistToken,
+		},
+		Telegram: internal.TelegramConfig{
+			Token:  telegramBotID,
+			ChatID: telegramChatID,
+		},
+	}
 }
