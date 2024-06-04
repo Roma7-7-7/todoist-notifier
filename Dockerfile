@@ -10,8 +10,6 @@ RUN make build
 # run
 FROM alpine:3.19
 
-EXPOSE 8080
-
 ENV SCHEDULE="0 9-23 * * *"
 ENV TODOIST_TOKEN=""
 ENV TELEGRAM_BOT_ID=""
