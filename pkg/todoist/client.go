@@ -14,6 +14,7 @@ const baseURL = "https://api.todoist.com/rest"
 type (
 	Logger interface {
 		DebugContext(ctx context.Context, msg string, fields ...any)
+		InfoContext(ctx context.Context, msg string, fields ...any)
 		WarnContext(ctx context.Context, msg string, fields ...any)
 	}
 
