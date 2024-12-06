@@ -1,25 +1,10 @@
 package internal
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"sort"
-	"text/template"
 	"time"
-
-	"github.com/Roma7-7-7/todoist-notifier/pkg/todoist"
 )
-
-var tasksTemplate = template.Must(template.New("tasks").
-	Funcs(template.FuncMap{
-		"toCircle": toCircle,
-	}).
-	Parse(`Uncompleted tasks for today:
-{{- range .}}
-- {{.Priority | toCircle}} {{ .Content }}
-{{- end}}
-`))
 
 type (
 	Publisher interface {
@@ -50,7 +35,7 @@ func (j *Job) Run(ctx context.Context, notifyIfNoTasks bool) error {
 	if err != nil {
 		return fmt.Errorf("get tasks: %w", err)
 	}
-	tasks = filterByDueDate(tasks, today)
+	tasks = FilterAndSortTasks(tasks)
 
 	if len(tasks) == 0 {
 		j.log.InfoContext(ctx, "no tasks for today")
@@ -63,45 +48,14 @@ func (j *Job) Run(ctx context.Context, notifyIfNoTasks bool) error {
 	}
 	j.log.DebugContext(ctx, "tasks to be reminded", "count", len(tasks))
 
-	sort.Slice(tasks, func(i, j int) bool {
-		if tasks[i].Priority == tasks[j].Priority {
-		    return tasks[i].ProjectID < tasks[j].ProjectID
-		}
-
-		return tasks[i].Priority > tasks[j].Priority
-	})
-
-	buff := &bytes.Buffer{}
-	if err = tasksTemplate.Execute(buff, tasks); err != nil {
-		return fmt.Errorf("execute template: %w", err)
+	msg, err := RenderTasksMessage(tasks)
+	if err != nil {
+		return fmt.Errorf("render asks message: %w", err)
 	}
 
-	if err = j.publisher.Publish(ctx, buff.String()); err != nil {
+	if err = j.publisher.Publish(ctx, msg); err != nil {
 		return fmt.Errorf("publish message: %w", err)
 	}
 
 	return nil
-}
-
-func toCircle(priority int) string {
-	switch priority {
-	case 4:
-		return "🔴"
-	case 3:
-		return "🟠"
-	case 2:
-		return "🔵"
-	default:
-		return "⚪"
-	}
-}
-
-func filterByDueDate(tasks []todoist.Task, date string) []todoist.Task {
-	res := make([]todoist.Task, 0, len(tasks))
-	for _, t := range tasks {
-		if t.Due != nil && t.Due.Date == date {
-			res = append(res, t)
-		}
-	}
-	return res
 }
