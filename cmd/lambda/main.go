@@ -11,12 +11,6 @@ import (
 	"github.com/aws/aws-lambda-go/lambda"
 )
 
-var (
-	todoistToken   string
-	telegramBotID  string
-	telegramChatID string
-)
-
 func main() {
 	httpClient := &http.Client{
 		Timeout: 5 * time.Second,
@@ -24,20 +18,15 @@ func main() {
 	log := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 		Level: slog.LevelInfo,
 	}))
-	todoistClient := todoist.NewClient(todoistToken, httpClient, 5, time.Second, log)
-	messagePublisher := internal.NewHTTPMessagePublisher(httpClient, telegramBotID)
-	handler := internal.NewLambdaHandler(todoistClient, messagePublisher, telegramChatID, log)
-	lambda.Start(handler.HandleRequest)
-}
+	conf, err := internal.GetConfig()
+	if err != nil {
+		log.Error("failed to get config", "error", err)
+		os.Exit(1)
+		return
+	}
 
-func init() {
-	if todoistToken = os.Getenv("TODOIST_TOKEN"); todoistToken == "" {
-		panic("TODOIST_TOKEN is not set")
-	}
-	if telegramBotID = os.Getenv("TELEGRAM_BOT_ID"); telegramBotID == "" {
-		panic("TELEGRAM_BOT_ID is not set")
-	}
-	if telegramChatID = os.Getenv("TELEGRAM_CHAT_ID"); telegramChatID == "" {
-		panic("TELEGRAM_CHAT_ID is not set")
-	}
+	todoistClient := todoist.NewClient(conf.TodoistToken, httpClient, 5, time.Second, log)
+	messagePublisher := internal.NewHTTPMessagePublisher(httpClient, conf.TelegramToken)
+	handler := internal.NewLambdaHandler(todoistClient, messagePublisher, conf.TelegramChatID, log)
+	lambda.Start(handler.HandleRequest)
 }
