@@ -9,7 +9,7 @@ import (
 	"github.com/Roma7-7-7/todoist-notifier/internal"
 )
 
-var cfg internal.Config
+var cfg internal.StandaloneConfig
 
 func main() {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
@@ -49,7 +49,7 @@ func init() {
 		panic("TELEGRAM_CHAT_ID is not set")
 	}
 
-	cfg = internal.Config{
+	cfg = internal.StandaloneConfig{
 		Schedule: schedule,
 		Todoist: internal.TodoistConfig{
 			Token: todoistToken,

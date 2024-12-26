@@ -35,7 +35,7 @@ type (
 		ChatID string
 	}
 
-	Config struct {
+	StandaloneConfig struct {
 		Schedule string
 		Todoist  TodoistConfig
 		Telegram TelegramConfig
@@ -53,7 +53,7 @@ type (
 	}
 )
 
-func NewApp(cfg Config, log Logger) (*App, error) {
+func NewApp(cfg StandaloneConfig, log Logger) (*App, error) {
 	publisher := &publisherProxy{}
 	job := NewJob(todoist.NewClient(cfg.Todoist.Token, http.DefaultClient, 5, time.Second, log), publisher, log)
 
