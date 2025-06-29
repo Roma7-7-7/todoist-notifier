@@ -77,7 +77,7 @@ func (c *Client) GetTasksV2(ctx context.Context, isCompleted bool) ([]Task, erro
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // ignore
 
 	if resp.StatusCode != http.StatusOK {
 		body := make([]byte, 1024)

@@ -50,7 +50,7 @@ func (p *HTTPMessagePublisher) SendMessage(ctx context.Context, chatID, text str
 	if err != nil {
 		return fmt.Errorf("do request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // ignore
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
