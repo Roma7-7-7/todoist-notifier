@@ -3,19 +3,26 @@ package internal
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
+
+	"github.com/Roma7-7-7/todoist-notifier/pkg/todoist"
 )
 
 type (
+	TodoistClient interface {
+		GetTasksV2(ctx context.Context, isCompleted bool) ([]todoist.Task, error)
+	}
+
 	LambdaHandler struct {
 		todoistClient TodoistClient
 		msgPublisher  *HTTPMessagePublisher
 		chatID        string
-		log           Logger
+		log           *slog.Logger
 	}
 )
 
-func NewLambdaHandler(todoistClient TodoistClient, msgPublisher *HTTPMessagePublisher, chatID string, log Logger) *LambdaHandler {
+func NewLambdaHandler(todoistClient TodoistClient, msgPublisher *HTTPMessagePublisher, chatID string, log *slog.Logger) *LambdaHandler {
 	return &LambdaHandler{
 		todoistClient: todoistClient,
 		msgPublisher:  msgPublisher,

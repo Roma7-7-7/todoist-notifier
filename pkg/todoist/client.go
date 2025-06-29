@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log/slog"
 	"net/http"
 	"time"
 )
@@ -67,22 +66,23 @@ func (c *Client) GetTasksV2(ctx context.Context, isCompleted bool) ([]Task, erro
 	q.Add("is_completed", fmt.Sprintf("%t", isCompleted))
 	req.URL.RawQuery = q.Encode()
 
-	c.log.DebugContext(ctx, "sending request", slog.String("url", req.URL.String()),
-		slog.String("method", req.Method),
-		slog.String("token", c.token),
-		slog.Bool("is_completed", isCompleted))
+	c.log.DebugContext(ctx, "sending request",
+		"url", req.URL.String(),
+		"method", req.Method,
+		"token", c.token,
+		"is_completed", isCompleted)
 
 	req = req.WithContext(ctx)
 	resp, err := c.doWithRetry(ctx, req)
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // ignore
 
 	if resp.StatusCode != http.StatusOK {
 		body := make([]byte, 1024)
 		n, _ := resp.Body.Read(body)
-		c.log.WarnContext(ctx, "unexpected status code", slog.Int("status_code", resp.StatusCode), slog.String("body", string(body[:n])))
+		c.log.WarnContext(ctx, "unexpected status code", "status_code", resp.StatusCode, "body", string(body[:n]))
 
 		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
 	}
