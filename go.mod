@@ -1,6 +1,6 @@
 module github.com/Roma7-7-7/todoist-notifier
 
-go 1.24.4
+go 1.25.3
 
 require (
 	github.com/aws/aws-lambda-go v1.49.0
