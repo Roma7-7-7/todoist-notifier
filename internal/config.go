@@ -1,13 +1,13 @@
 package internal
 
 import (
+	"context"
 	"fmt"
 	"os"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/ssm"
 )
 
 const defaultAWSRegion = "eu-central-1"
@@ -18,29 +18,23 @@ type Config struct {
 	TelegramChatID string
 }
 
-func GetConfig() (*Config, error) {
+func GetConfig(ctx context.Context) (*Config, error) {
 	region := os.Getenv("AWS_REGION")
 	if region == "" {
 		region = defaultAWSRegion
 	}
 
-	sess, err := session.NewSession(&aws.Config{
-		Region: aws.String(region),
-	})
+	cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(region))
 	if err != nil {
-		return nil, fmt.Errorf("create aws session: %w", err)
+		return nil, fmt.Errorf("load aws config: %w", err)
 	}
 
-	awsConfig := aws.NewConfig().WithRegion(region)
-	if os.Getenv("AWS_ENV_CREDS") == "true" {
-		awsConfig = awsConfig.WithCredentials(credentials.NewEnvCredentials())
-	}
-	ssmClient := ssm.New(sess, awsConfig)
-	parameters, err := ssmClient.GetParameters(&ssm.GetParametersInput{
-		Names: []*string{
-			aws.String("/todoist-notifier-bot/prod/todoist-token"),
-			aws.String("/todoist-notifier-bot/prod/telegram-token"),
-			aws.String("/todoist-notifier-bot/prod/telegram-chat-id"),
+	ssmClient := ssm.NewFromConfig(cfg)
+	parameters, err := ssmClient.GetParameters(ctx, &ssm.GetParametersInput{
+		Names: []string{
+			"/todoist-notifier-bot/prod/todoist-token",
+			"/todoist-notifier-bot/prod/telegram-token",
+			"/todoist-notifier-bot/prod/telegram-chat-id",
 		},
 		WithDecryption: aws.Bool(true),
 	})
@@ -52,6 +46,9 @@ func GetConfig() (*Config, error) {
 	telegramToken := ""
 	telegramChatID := ""
 	for _, param := range parameters.Parameters {
+		if param.Name == nil || param.Value == nil {
+			continue
+		}
 		switch *param.Name {
 		case "/todoist-notifier-bot/prod/todoist-token":
 			todoistToken = *param.Value

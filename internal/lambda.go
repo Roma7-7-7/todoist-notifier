@@ -14,15 +14,19 @@ type (
 		GetTasksV2(ctx context.Context, isCompleted bool) ([]todoist.Task, error)
 	}
 
+	HTTPMessagePublisher interface {
+		SendMessage(ctx context.Context, chatID, message string) error
+	}
+
 	LambdaHandler struct {
 		todoistClient TodoistClient
-		msgPublisher  *HTTPMessagePublisher
+		msgPublisher  HTTPMessagePublisher
 		chatID        string
 		log           *slog.Logger
 	}
 )
 
-func NewLambdaHandler(todoistClient TodoistClient, msgPublisher *HTTPMessagePublisher, chatID string, log *slog.Logger) *LambdaHandler {
+func NewLambdaHandler(todoistClient TodoistClient, msgPublisher HTTPMessagePublisher, chatID string, log *slog.Logger) *LambdaHandler {
 	return &LambdaHandler{
 		todoistClient: todoistClient,
 		msgPublisher:  msgPublisher,
