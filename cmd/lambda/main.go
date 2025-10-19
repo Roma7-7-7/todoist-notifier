@@ -7,6 +7,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/Roma7-7-7/telegram"
+
 	"github.com/Roma7-7-7/todoist-notifier/internal"
 	"github.com/Roma7-7-7/todoist-notifier/pkg/todoist"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -29,7 +31,7 @@ func main() {
 	}
 
 	todoistClient := todoist.NewClient(conf.TodoistToken, httpClient, 5, time.Second, log)
-	messagePublisher := internal.NewHTTPMessagePublisher(httpClient, conf.TelegramToken)
+	messagePublisher := telegram.NewClient(httpClient, conf.TelegramToken)
 	handler := internal.NewLambdaHandler(todoistClient, messagePublisher, conf.TelegramChatID, log)
 	lambda.Start(handler.HandleRequest)
 }
