@@ -27,6 +27,7 @@ type (
 		Content   string   `json:"content"`
 		Priority  int      `json:"priority"`
 		Due       *TaskDue `json:"due"`
+		Labes     []string `json:"labels"`
 	}
 
 	TaskDue struct {

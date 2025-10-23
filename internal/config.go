@@ -13,12 +13,22 @@ import (
 const defaultAWSRegion = "eu-central-1"
 
 type Config struct {
+	Dev            bool
 	TodoistToken   string
 	TelegramToken  string
 	TelegramChatID string
 }
 
 func GetConfig(ctx context.Context) (*Config, error) {
+	if os.Getenv("ENV") == "dev" {
+		return &Config{
+			Dev:            true,
+			TodoistToken:   os.Getenv("TODOIST_TOKEN"),
+			TelegramToken:  os.Getenv("TELEGRAM_BOT_ID"),
+			TelegramChatID: os.Getenv("TELEGRAM_CHAT_ID"),
+		}, nil
+	}
+
 	region := os.Getenv("AWS_REGION")
 	if region == "" {
 		region = defaultAWSRegion
