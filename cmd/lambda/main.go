@@ -36,7 +36,11 @@ func run(ctx context.Context) int {
 
 	todoistClient := todoist.NewClient(conf.TodoistToken, httpClient, 5, time.Second, log)
 	messagePublisher := telegram.NewClient(httpClient, conf.TelegramToken)
-	handler := internal.NewLambdaHandler(todoistClient, messagePublisher, conf.TelegramChatID, log)
+	handler, err := internal.NewLambdaHandler(todoistClient, messagePublisher, conf.TelegramChatID, log)
+	if err != nil {
+		log.ErrorContext(ctx, "failed to create handler", "error", err)
+		return 1
+	}
 	if !conf.Dev {
 		lambda.Start(handler.HandleRequest)
 		return 0
