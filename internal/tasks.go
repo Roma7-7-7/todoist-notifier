@@ -28,10 +28,25 @@ func FilterAndSortTasks(tasks []todoist.Task) []todoist.Task {
 		return nil
 	}
 
-	date := time.Now().In(KyivTime).Format("2006-01-02")
+	now := time.Now()
+	date := now.Format("2006-01-02")
 	res := make([]todoist.Task, 0, len(tasks))
 	for _, t := range tasks {
-		if t.Due != nil && t.Due.Date == date {
+		if t.Due == nil || t.Due.Date != date {
+			continue
+		}
+
+		labels := timeLabels(t)
+		switch {
+		case labels["12pm"] && now.Hour() < 12:
+			continue
+		case labels["3pm"] && now.Hour() < 15:
+			continue
+		case labels["6pm"] && now.Hour() < 18:
+			continue
+		case labels["9pm"] && now.Hour() < 21:
+			continue
+		default:
 			res = append(res, t)
 		}
 	}
@@ -67,6 +82,19 @@ func toCircle(priority int) string {
 	default:
 		return "⚪"
 	}
+}
+
+func timeLabels(task todoist.Task) map[string]bool {
+	res := make(map[string]bool, len(task.Labes))
+	for _, l := range task.Labes {
+		switch l {
+		case "3pm", "6pm", "9pm", "12pm":
+			res[l] = true
+		default:
+			continue
+		}
+	}
+	return res
 }
 
 func init() {
