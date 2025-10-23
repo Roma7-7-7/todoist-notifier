@@ -30,7 +30,7 @@ func run(ctx context.Context) int {
 	}))
 	conf, err := internal.GetConfig(ctx)
 	if err != nil {
-		log.Error("failed to get config", "error", err)
+		log.ErrorContext(ctx, "failed to get config", "error", err)
 		return 1
 	}
 
@@ -44,7 +44,7 @@ func run(ctx context.Context) int {
 
 	err = handler.HandleRequest(ctx)
 	if err != nil {
-		log.Error("failed to handle request", "error", err)
+		log.ErrorContext(ctx, "failed to handle request", "error", err)
 		return 1
 	}
 
