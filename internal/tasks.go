@@ -3,7 +3,6 @@ package internal
 import (
 	"bytes"
 	"fmt"
-	"log/slog"
 	"sort"
 	"text/template"
 	"time"
@@ -21,14 +20,11 @@ var tasksTemplate = template.Must(template.New("tasks").
 {{- end}}
 `))
 
-var KyivTime *time.Location
-
-func FilterAndSortTasks(tasks []todoist.Task) []todoist.Task {
+func FilterAndSortTasks(tasks []todoist.Task, now time.Time) []todoist.Task {
 	if len(tasks) == 0 {
 		return nil
 	}
 
-	now := time.Now()
 	date := now.Format("2006-01-02")
 	res := make([]todoist.Task, 0, len(tasks))
 	for _, t := range tasks {
@@ -95,13 +91,4 @@ func timeLabels(task todoist.Task) map[string]bool {
 		}
 	}
 	return res
-}
-
-func init() {
-	loc, err := time.LoadLocation("Europe/Kyiv")
-	if err != nil {
-		panic(err)
-	}
-	KyivTime = loc
-	slog.Info("initialized kyiv time location", "current_time", time.Now().In(KyivTime).Format(time.RFC3339))
 }
