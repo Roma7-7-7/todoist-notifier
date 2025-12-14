@@ -1,6 +1,7 @@
 package todoist
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -27,11 +28,16 @@ type (
 		Content   string   `json:"content"`
 		Priority  int      `json:"priority"`
 		Due       *TaskDue `json:"due"`
-		Labes     []string `json:"labels"`
+		Labels    []string `json:"labels"`
 	}
 
 	TaskDue struct {
 		Date string `json:"date"`
+	}
+
+	UpdateTaskRequest struct {
+		Priority int      `json:"priority,omitempty,omitzero"`
+		Labels   []string `json:"labels,omitempty,omitzero"`
 	}
 
 	Client struct {
@@ -53,10 +59,10 @@ func NewClient(token string, httpClient HTTPClient, retriesCount int, retriesDel
 	}
 }
 
-func (c *Client) GetTasksV2(ctx context.Context, isCompleted bool) ([]Task, error) {
+func (c *Client) GetTasks(ctx context.Context, isCompleted bool) ([]Task, error) {
 	res := make([]Task, 0, 100)
 
-	req, err := http.NewRequest("GET", baseURL+"/v2/tasks", nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", baseURL+"/v2/tasks", nil)
 	if err != nil {
 		return nil, fmt.Errorf("create request: %w", err)
 	}
@@ -73,7 +79,6 @@ func (c *Client) GetTasksV2(ctx context.Context, isCompleted bool) ([]Task, erro
 		"token", c.token,
 		"is_completed", isCompleted)
 
-	req = req.WithContext(ctx)
 	resp, err := c.doWithRetry(ctx, req)
 	if err != nil {
 		return nil, err
@@ -81,9 +86,11 @@ func (c *Client) GetTasksV2(ctx context.Context, isCompleted bool) ([]Task, erro
 	defer resp.Body.Close() //nolint:errcheck // ignore
 
 	if resp.StatusCode != http.StatusOK {
+		c.log.WarnContext(ctx, "unexpected status code", "status_code", resp.StatusCode)
+
 		body := make([]byte, 1024)
 		n, _ := resp.Body.Read(body)
-		c.log.WarnContext(ctx, "unexpected status code", "status_code", resp.StatusCode, "body", string(body[:n]))
+		c.log.DebugContext(ctx, "response payload", string(body[:n]))
 
 		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
 	}
@@ -93,6 +100,50 @@ func (c *Client) GetTasksV2(ctx context.Context, isCompleted bool) ([]Task, erro
 	}
 
 	return res, nil
+}
+
+func (c *Client) UpdateTask(ctx context.Context, taskID string, updateReq UpdateTaskRequest) (*Task, error) {
+	body, err := json.Marshal(updateReq)
+	if err != nil {
+		return nil, fmt.Errorf("marshal request: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "POST", baseURL+"/v2/tasks/"+taskID, bytes.NewReader(body))
+	if err != nil {
+		return nil, fmt.Errorf("create request: %w", err)
+	}
+
+	req.Header.Set("Authorization", "Bearer "+c.token)
+	req.Header.Set("Content-Type", "application/json")
+
+	c.log.DebugContext(ctx, "sending update task request",
+		"url", req.URL.String(),
+		"method", req.Method,
+		"task_id", taskID,
+		"body", string(body))
+
+	resp, err := c.doWithRetry(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close() //nolint:errcheck // ignore
+
+	if resp.StatusCode != http.StatusOK {
+		c.log.WarnContext(ctx, "unexpected status code", "status_code", resp.StatusCode)
+
+		body := make([]byte, 1024)
+		n, _ := resp.Body.Read(body)
+		c.log.DebugContext(ctx, "response payload", "payload", string(body[:n]))
+
+		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+
+	var task Task
+	if err = json.NewDecoder(resp.Body).Decode(&task); err != nil {
+		return nil, fmt.Errorf("decode response: %w", err)
+	}
+
+	return &task, nil
 }
 
 func (c *Client) doWithRetry(ctx context.Context, req *http.Request) (*http.Response, error) {

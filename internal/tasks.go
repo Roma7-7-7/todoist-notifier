@@ -81,8 +81,8 @@ func toCircle(priority int) string {
 }
 
 func timeLabels(task todoist.Task) map[string]bool {
-	res := make(map[string]bool, len(task.Labes))
-	for _, l := range task.Labes {
+	res := make(map[string]bool, len(task.Labels))
+	for _, l := range task.Labels {
 		switch l {
 		case "3pm", "6pm", "9pm", "12pm":
 			res[l] = true

@@ -12,7 +12,7 @@ import (
 
 type (
 	TodoistClient interface {
-		GetTasksV2(ctx context.Context, isCompleted bool) ([]todoist.Task, error)
+		GetTasks(ctx context.Context, isCompleted bool) ([]todoist.Task, error)
 	}
 
 	HTTPMessagePublisher interface {
@@ -60,7 +60,7 @@ func (h *LambdaHandler) HandleRequest(ctx context.Context) error {
 		return nil
 	}
 
-	tasks, err := h.todoistClient.GetTasksV2(ctx, false)
+	tasks, err := h.todoistClient.GetTasks(ctx, false)
 	if err != nil {
 		return fmt.Errorf("get tasks: %w", err)
 	}
