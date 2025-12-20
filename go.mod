@@ -3,11 +3,12 @@ module github.com/Roma7-7-7/todoist-notifier
 go 1.25.5
 
 require (
-	github.com/Roma7-7-7/telegram v0.0.0-20251019173429-87c209129a30
+	github.com/Roma7-7-7/telegram v0.0.0-20251125113559-5142e2c67873
 	github.com/aws/aws-lambda-go v1.50.0
 	github.com/aws/aws-sdk-go-v2 v1.40.0
 	github.com/aws/aws-sdk-go-v2/config v1.32.2
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.67.4
+	github.com/go-co-op/gocron/v2 v2.19.0
 )
 
 require (
@@ -23,5 +24,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.35.10 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sts v1.41.2 // indirect
 	github.com/aws/smithy-go v1.23.2 // indirect
-	github.com/stretchr/testify v1.10.0 // indirect
+	github.com/google/uuid v1.6.0 // indirect
+	github.com/jonboulle/clockwork v0.5.0 // indirect
+	github.com/robfig/cron/v3 v3.0.1 // indirect
 )
