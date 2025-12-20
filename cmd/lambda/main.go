@@ -28,7 +28,7 @@ func run(ctx context.Context) int {
 
 	conf, err := internal.GetConfig(ctx)
 	if err != nil {
-		slog.ErrorContext(ctx, "failed to get config", "error", err)
+		slog.ErrorContext(ctx, "failed to get config", "error", err) //nolint:sloglint // logger is not yet initialized
 		return 1
 	}
 
