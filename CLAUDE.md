@@ -336,6 +336,36 @@ log := internal.NewLogger(isDev)
 
 This ensures consistent logging configuration across all entry points (Lambda, daemon, dev tools).
 
+### Context-Aware Logging
+
+**CRITICAL RULE**: Always use context-aware logging methods when a context is available.
+
+**Always use the `Context` variants of logging methods:**
+```go
+// ✅ GOOD - use context-aware logging
+log.InfoContext(ctx, "message sent")
+log.WarnContext(ctx, "failed to get next run time", "error", err)
+log.ErrorContext(ctx, "failed to create notifier", "error", err)
+log.DebugContext(ctx, "no tasks for today")
+
+// ❌ BAD - don't use non-context logging when context is available
+log.Info("message sent")
+log.Warn("failed to get next run time", "error", err)
+log.Error("failed to create notifier", "error", err)
+log.Debug("no tasks for today")
+```
+
+**Why use context-aware logging?**
+- Enables distributed tracing and request correlation
+- Automatically includes context metadata in logs
+- Supports timeout and cancellation tracking
+- Better integration with observability tools
+- Consistent structured logging with context propagation
+
+**When NOT to use context logging:**
+- Only use non-context methods (`Info`, `Warn`, etc.) when no context is available
+- This should be rare - most functions should accept and propagate context
+
 ### Error Handling
 
 **CRITICAL RULE**: All errors returned from public functions/methods MUST be wrapped with context.

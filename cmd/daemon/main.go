@@ -73,10 +73,10 @@ func run(ctx context.Context) int {
 
 	nextRun, err := job.NextRun()
 	if err != nil {
-		log.Warn("failed to get next run time", "error", err)
-		log.Info("starting daemon notifier", "schedule", conf.Schedule, "timezone", conf.Location)
+		log.WarnContext(ctx, "failed to get next run time", "error", err)
+		log.InfoContext(ctx, "starting daemon notifier", "schedule", conf.Schedule, "timezone", conf.Location)
 	} else {
-		log.Info("starting daemon notifier", "schedule", conf.Schedule, "timezone", conf.Location, "next_run", nextRun)
+		log.InfoContext(ctx, "starting daemon notifier", "schedule", conf.Schedule, "timezone", conf.Location, "next_run", nextRun)
 	}
 	defer func() {
 		if err := scheduler.Shutdown(); err != nil {
@@ -89,10 +89,10 @@ func run(ctx context.Context) int {
 
 	select {
 	case sig := <-sigChan:
-		log.Info("received shutdown signal", "signal", sig)
+		log.InfoContext(ctx, "received shutdown signal", "signal", sig)
 		return 0
 	case <-ctx.Done():
-		log.Info("context cancelled")
+		log.InfoContext(ctx, "context cancelled")
 		return 0
 	}
 }

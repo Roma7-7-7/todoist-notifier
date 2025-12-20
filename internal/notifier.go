@@ -69,6 +69,6 @@ func (n *Notifier) SendNotification(ctx context.Context) error {
 		return fmt.Errorf("publish message: %w", err)
 	}
 
-	n.log.Info("message sent")
+	n.log.InfoContext(ctx, "message sent")
 	return nil
 }
