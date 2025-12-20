@@ -16,27 +16,27 @@ import (
 
 func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second) //nolint:mnd // it's ok
-	status := run(ctx)
+	exitCode := run(ctx)
 	cancel()
-	os.Exit(status)
+	os.Exit(exitCode)
 }
 
 func run(ctx context.Context) int {
 	httpClient := &http.Client{
 		Timeout: 5 * time.Second,
 	}
-	log := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-		Level: slog.LevelInfo,
-	}))
+
 	conf, err := internal.GetConfig(ctx)
 	if err != nil {
-		log.ErrorContext(ctx, "failed to get config", "error", err)
+		slog.ErrorContext(ctx, "failed to get config", "error", err) //nolint:sloglint // logger is not yet initialized
 		return 1
 	}
 
+	log := internal.NewLogger(conf.Dev)
+
 	todoistClient := todoist.NewClient(conf.TodoistToken, httpClient, 5, time.Second, log)
 	messagePublisher := telegram.NewClient(httpClient, conf.TelegramToken)
-	handler, err := internal.NewLambdaHandler(todoistClient, messagePublisher, conf.TelegramChatID, log)
+	handler, err := internal.NewLambdaHandler(conf, todoistClient, messagePublisher, log)
 	if err != nil {
 		log.ErrorContext(ctx, "failed to create handler", "error", err)
 		return 1
