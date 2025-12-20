@@ -16,8 +16,9 @@ import (
 
 func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second) //nolint:mnd // it's ok
-	defer cancel()
-	os.Exit(run(ctx))
+	exitCode := run(ctx)
+	cancel()
+	os.Exit(exitCode)
 }
 
 func run(ctx context.Context) int {

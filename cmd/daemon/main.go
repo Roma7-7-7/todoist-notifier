@@ -17,8 +17,9 @@ import (
 
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	os.Exit(run(ctx))
+	exitCode := run(ctx)
+	cancel()
+	os.Exit(exitCode)
 }
 
 func run(ctx context.Context) int {
@@ -73,8 +74,10 @@ func run(ctx context.Context) int {
 	nextRun, err := job.NextRun()
 	if err != nil {
 		log.Warn("failed to get next run time", "error", err)
+		log.Info("starting daemon notifier", "schedule", conf.Schedule, "timezone", conf.Location)
+	} else {
+		log.Info("starting daemon notifier", "schedule", conf.Schedule, "timezone", conf.Location, "next_run", nextRun)
 	}
-	log.Info("starting daemon notifier", "schedule", conf.Schedule, "timezone", conf.Location, "next_run", nextRun)
 	defer func() {
 		if err := scheduler.Shutdown(); err != nil {
 			log.ErrorContext(ctx, "failed to shutdown scheduler", "error", err)

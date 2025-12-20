@@ -77,7 +77,6 @@ ENV=dev TOKEN=<token> go run cmd/app/main.go
 **Notification Engine** (`internal/notifier.go`)
 - `Notifier` struct - Core notification logic shared by both Lambda and daemon modes
 - `SendNotification(ctx)` - Fetches tasks, filters for today, renders message, sends via Telegram
-- Only processes requests during working hours (9:00-23:00 in configured timezone)
 - Interfaces `TodoistClient` and `HTTPMessagePublisher` enable testing/mocking
 
 **Configuration Management** (`internal/config.go`)
@@ -100,7 +99,7 @@ ENV=dev TOKEN=<token> go run cmd/app/main.go
 - Cron-based scheduling using gocron v2 library
 - Configurable via `SCHEDULE` env var with standard cron expressions (minute hour day month weekday)
 - Graceful shutdown on SIGINT/SIGTERM
-- Runs notification immediately on startup, then follows cron schedule
+- **Does NOT run notification on startup** - waits for first scheduled time to avoid unnecessary notifications during deployments
 - Default schedule: "0 * 9-23 * * *" (every hour from 9am to 11pm)
 - Timezone-aware scheduling using `LOCATION` env var
 

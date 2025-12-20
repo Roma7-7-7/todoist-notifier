@@ -49,18 +49,12 @@ func NewNotifier(conf *Config, todoistClient TodoistClient, msgPublisher HTTPMes
 func (n *Notifier) SendNotification(ctx context.Context) error {
 	n.log.InfoContext(ctx, "sending notification")
 
-	now := n.now()
-	if now.Hour() < 9 || now.Hour() > 23 {
-		n.log.DebugContext(ctx, "not a working hour")
-		return nil
-	}
-
 	tasks, err := n.todoistClient.GetTasks(ctx, false)
 	if err != nil {
 		return fmt.Errorf("get tasks: %w", err)
 	}
 
-	tasks = FilterAndSortTasks(tasks, now)
+	tasks = FilterAndSortTasks(tasks, n.now())
 	if len(tasks) == 0 {
 		n.log.DebugContext(ctx, "no tasks for today")
 		return nil
