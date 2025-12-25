@@ -55,10 +55,15 @@ Runs all tests in the project.
 ENV=dev TODOIST_TOKEN=<token> TELEGRAM_BOT_ID=<bot_id> TELEGRAM_CHAT_ID=<chat_id> go run cmd/lambda/main.go
 ```
 
-**Daemon mode (runs continuously with cron scheduler):**
+**Daemon mode (runs continuously with scheduler + interactive bot):**
 ```bash
 ENV=dev TODOIST_TOKEN=<token> TELEGRAM_BOT_ID=<bot_id> TELEGRAM_CHAT_ID=<chat_id> SCHEDULE="*/5 * * * *" go run cmd/daemon/main.go
 ```
+
+The daemon mode includes:
+- Cron scheduler for automated notifications (configured via `SCHEDULE`)
+- Interactive Telegram bot responding to `/tasks` command
+- Both components run in the same process and share notification logic
 
 **Testing the Todoist client:**
 ```bash
@@ -103,6 +108,14 @@ ENV=dev TOKEN=<token> go run cmd/app/main.go
 - Default schedule: "0 * 9-23 * * *" (every hour from 9am to 11pm)
 - Timezone-aware scheduling using `LOCATION` env var
 
+**Bot Integration** (`internal/bot.go`)
+- Interactive Telegram bot using `gopkg.in/telebot.v3`
+- Runs alongside scheduler in daemon mode (both share same `Notifier` instance)
+- Chat ID validation middleware blocks unauthorized access
+- `/tasks` command - returns filtered tasks for current time
+- Reuses existing task filtering and message rendering logic
+- Graceful shutdown on context cancellation
+
 ### External Packages
 
 **pkg/todoist** - Todoist REST API client
@@ -118,6 +131,7 @@ ENV=dev TOKEN=<token> go run cmd/app/main.go
 - AWS Lambda Go SDK for Lambda execution (Lambda mode only)
 - AWS SDK v2 for SSM parameter access
 - Custom Telegram client: `github.com/Roma7-7-7/telegram`
+- Telegram bot library: `gopkg.in/telebot.v3` (daemon mode only)
 - Cron scheduler: `github.com/go-co-op/gocron/v2` (daemon mode only)
 - Environment config: `github.com/kelseyhightower/envconfig`
 

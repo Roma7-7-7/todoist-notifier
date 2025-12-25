@@ -9,8 +9,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Roma7-7-7/telegram"
 	"github.com/Roma7-7-7/todoist-notifier/internal"
+	"github.com/Roma7-7-7/todoist-notifier/pkg/clock"
 	"github.com/Roma7-7-7/todoist-notifier/pkg/todoist"
 	"github.com/go-co-op/gocron/v2"
 )
@@ -36,19 +36,25 @@ func run(ctx context.Context) int {
 	}
 
 	todoistClient := todoist.NewClient(conf.TodoistToken, httpClient, 5, time.Second, log) //nolint:mnd // reasonable retry config
-	messagePublisher := telegram.NewClient(httpClient, conf.TelegramToken)
-
-	notifier, err := internal.NewNotifier(conf, todoistClient, messagePublisher, log)
-	if err != nil {
-		log.ErrorContext(ctx, "failed to create notifier", "error", err)
-		return 1
-	}
 
 	loc, err := time.LoadLocation(conf.Location)
 	if err != nil {
 		log.ErrorContext(ctx, "failed to load timezone", "error", err, "location", conf.Location)
 		return 1
 	}
+	clock := clock.NewZonedClock(loc)
+
+	bot, err := internal.NewBot(conf.TelegramToken, todoistClient, conf.TelegramChatID, clock, log)
+	if err != nil {
+		log.ErrorContext(ctx, "failed to create bot", "error", err)
+		return 1
+	}
+
+	go func() {
+		if err := bot.Start(ctx); err != nil {
+			log.ErrorContext(ctx, "bot failed", "error", err)
+		}
+	}()
 
 	scheduler, err := gocron.NewScheduler(gocron.WithLocation(loc))
 	if err != nil {
@@ -59,7 +65,7 @@ func run(ctx context.Context) int {
 	job, err := scheduler.NewJob(
 		gocron.CronJob(conf.Schedule, false),
 		gocron.NewTask(func() {
-			if err := notifier.SendNotification(ctx); err != nil {
+			if err := bot.SendTasks(conf.TelegramChatID); err != nil {
 				log.ErrorContext(ctx, "failed to send notification", "error", err)
 			}
 		}),
@@ -74,9 +80,9 @@ func run(ctx context.Context) int {
 	nextRun, err := job.NextRun()
 	if err != nil {
 		log.WarnContext(ctx, "failed to get next run time", "error", err)
-		log.InfoContext(ctx, "starting daemon notifier", "schedule", conf.Schedule, "timezone", conf.Location)
+		log.InfoContext(ctx, "starting daemon", "schedule", conf.Schedule, "timezone", conf.Location)
 	} else {
-		log.InfoContext(ctx, "starting daemon notifier", "schedule", conf.Schedule, "timezone", conf.Location, "next_run", nextRun)
+		log.InfoContext(ctx, "starting daemon", "schedule", conf.Schedule, "timezone", conf.Location, "next_run", nextRun)
 	}
 	defer func() {
 		if err := scheduler.Shutdown(); err != nil {

@@ -25,5 +25,7 @@ go.work
 bin/
 vendor/
 
+.claude/projects
+
 # HTTP client environment files (private)
 http-client.private.env.json
