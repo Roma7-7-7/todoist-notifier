@@ -20,7 +20,7 @@ var tasksTemplate = template.Must(template.New("tasks").
 {{- end}}
 `))
 
-func FilterAndSortTasks(tasks []todoist.Task, now time.Time) []todoist.Task {
+func FilterAndSortTasks(tasks []todoist.Task, now time.Time, filterByTime bool) []todoist.Task {
 	if len(tasks) == 0 {
 		return nil
 	}
@@ -34,6 +34,8 @@ func FilterAndSortTasks(tasks []todoist.Task, now time.Time) []todoist.Task {
 
 		labels := timeLabels(t)
 		switch {
+		case !filterByTime:
+			res = append(res, t)
 		case labels["12pm"] && now.Hour() < 12:
 			continue
 		case labels["3pm"] && now.Hour() < 15:
@@ -47,12 +49,12 @@ func FilterAndSortTasks(tasks []todoist.Task, now time.Time) []todoist.Task {
 		}
 	}
 
-	sort.Slice(tasks, func(i, j int) bool {
-		if tasks[i].Priority == tasks[j].Priority {
-			return tasks[i].ProjectID < tasks[j].ProjectID
+	sort.Slice(res, func(i, j int) bool {
+		if res[i].Priority == res[j].Priority {
+			return res[i].ProjectID < res[j].ProjectID
 		}
 
-		return tasks[i].Priority > tasks[j].Priority
+		return res[i].Priority > res[j].Priority
 	})
 
 	return res
