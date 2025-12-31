@@ -145,7 +145,7 @@ func (b *Bot) handleError(next tele.HandlerFunc) tele.HandlerFunc {
 		err := next(c)
 		if err != nil {
 			args := []any{
-				"chat_id", fmt.Sprintf("%d", c.Chat().ID),
+				"chat_id", c.Chat().ID,
 				"error", err.Error(),
 			}
 			if strings.HasPrefix(c.Message().Text, "/") {
