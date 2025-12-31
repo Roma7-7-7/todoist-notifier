@@ -4,16 +4,11 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strconv"
 	"time"
-
-	"github.com/Roma7-7-7/todoist-notifier/pkg/todoist"
 )
 
 type (
-	TodoistClient interface {
-		GetTasks(ctx context.Context, isCompleted bool) ([]todoist.Task, error)
-	}
-
 	HTTPMessagePublisher interface {
 		SendMessage(ctx context.Context, chatID, message string) error
 	}
@@ -37,7 +32,7 @@ func NewNotifier(conf *Config, todoistClient TodoistClient, msgPublisher HTTPMes
 	return &Notifier{
 		todoistClient: todoistClient,
 		msgPublisher:  msgPublisher,
-		chatID:        conf.TelegramChatID,
+		chatID:        strconv.FormatInt(conf.TelegramChatID, 10),
 
 		now: func() time.Time {
 			return time.Now().In(loc)
@@ -54,7 +49,7 @@ func (n *Notifier) SendNotification(ctx context.Context) error {
 		return fmt.Errorf("get tasks: %w", err)
 	}
 
-	tasks = FilterAndSortTasks(tasks, n.now())
+	tasks = FilterAndSortTasks(tasks, n.now(), true)
 	if len(tasks) == 0 {
 		n.log.DebugContext(ctx, "no tasks for today")
 		return nil

@@ -9,6 +9,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/config v1.32.6
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.67.7
 	github.com/go-co-op/gocron/v2 v2.19.0
+	gopkg.in/telebot.v3 v3.3.8
 )
 
 require (
