@@ -68,15 +68,15 @@ func (b *Bot) Start(ctx context.Context) error {
 }
 
 func (b *Bot) registerHandlers() {
-	b.bot.Use(b.recover, b.chatIDMiddleware, b.handleError)
+	b.bot.Use(b.recover, b.handleError, b.chatIDMiddleware)
 	b.bot.Handle("/tasks", b.handleTasks)
 }
 
 func (b *Bot) handleTasks(c tele.Context) error {
-	return b.SendTasks(c.Chat().ID)
+	return b.SendTasks(c.Chat().ID, false)
 }
 
-func (b *Bot) SendTasks(chatID int64) error {
+func (b *Bot) SendTasks(chatID int64, ignoreNoTasks bool) error {
 	ctx, cancel := b.context()
 	defer cancel()
 
@@ -89,9 +89,18 @@ func (b *Bot) SendTasks(chatID int64) error {
 
 	tasks = FilterAndSortTasks(tasks, b.clock.Now(), false)
 
-	msg, err := RenderTasksMessage(tasks)
-	if err != nil {
-		return fmt.Errorf("render tasks message: %w", err)
+	var msg string
+	switch {
+	case len(tasks) != 0:
+		msg, err = RenderTasksMessage(tasks)
+		if err != nil {
+			return fmt.Errorf("render tasks message: %w", err)
+		}
+	case len(tasks) == 0 && !ignoreNoTasks:
+		msg = "No tasks for today! 🎉"
+	case len(tasks) == 0 && ignoreNoTasks:
+		b.log.DebugContext(ctx, "no tasks to send")
+		return nil
 	}
 
 	if _, err := b.bot.Send(&tele.Chat{ID: chatID}, msg); err != nil {

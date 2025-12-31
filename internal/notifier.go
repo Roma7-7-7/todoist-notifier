@@ -32,7 +32,7 @@ func NewNotifier(conf *Config, todoistClient TodoistClient, msgPublisher HTTPMes
 	return &Notifier{
 		todoistClient: todoistClient,
 		msgPublisher:  msgPublisher,
-		chatID:        strconv.Itoa(int(conf.TelegramChatID)),
+		chatID:        strconv.FormatInt(conf.TelegramChatID, 10),
 
 		now: func() time.Time {
 			return time.Now().In(loc)

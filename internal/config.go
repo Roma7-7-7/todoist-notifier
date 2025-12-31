@@ -74,12 +74,7 @@ func (c *Config) validate(telegramChatID string) error {
 	if c.TelegramToken == "" {
 		missing = append(missing, "TELEGRAM_BOT_ID")
 	}
-	var err error
-	c.TelegramChatID, err = strconv.ParseInt(telegramChatID, 10, 64)
-	if err != nil {
-		return fmt.Errorf("parse TELEGRAM_CHAT_ID: %w", err)
-	}
-	if c.TelegramChatID == 0 {
+	if telegramChatID == "" {
 		missing = append(missing, "TELEGRAM_CHAT_ID")
 	}
 
@@ -87,13 +82,11 @@ func (c *Config) validate(telegramChatID string) error {
 		return fmt.Errorf("required environment variables not set: %v", missing)
 	}
 
-	return nil
-}
-
-func mustInt64(s string) int64 {
-	i, err := strconv.ParseInt(s, 10, 64)
+	var err error
+	c.TelegramChatID, err = strconv.ParseInt(telegramChatID, 10, 64)
 	if err != nil {
-		panic(fmt.Sprintf("%s is not a valid integer 64", s))
+		return fmt.Errorf("parse TELEGRAM_CHAT_ID: %w", err)
 	}
-	return i
+
+	return nil
 }
