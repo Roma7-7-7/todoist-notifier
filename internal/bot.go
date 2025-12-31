@@ -15,10 +15,6 @@ const (
 	defaultErrorMsg = "Something went wrong. Please try again later."
 )
 
-type TaskFormatter interface {
-	GetFormattedTasks(ctx context.Context) (string, error)
-}
-
 type Bot struct {
 	bot *tele.Bot
 
@@ -76,7 +72,7 @@ func (b *Bot) handleTasks(c tele.Context) error {
 	return b.SendTasks(c.Chat().ID, false)
 }
 
-func (b *Bot) SendTasks(chatID int64, ignoreNoTasks bool) error {
+func (b *Bot) SendTasks(chatID int64, silentIfEmpty bool) error {
 	ctx, cancel := b.context()
 	defer cancel()
 
@@ -96,9 +92,9 @@ func (b *Bot) SendTasks(chatID int64, ignoreNoTasks bool) error {
 		if err != nil {
 			return fmt.Errorf("render tasks message: %w", err)
 		}
-	case len(tasks) == 0 && !ignoreNoTasks:
+	case len(tasks) == 0 && !silentIfEmpty:
 		msg = "No tasks for today! 🎉"
-	case len(tasks) == 0 && ignoreNoTasks:
+	case len(tasks) == 0 && silentIfEmpty:
 		b.log.DebugContext(ctx, "no tasks to send")
 		return nil
 	}
@@ -119,7 +115,7 @@ func (b *Bot) recover(next tele.HandlerFunc) tele.HandlerFunc {
 	return func(c tele.Context) error {
 		defer func() {
 			if r := recover(); r != nil {
-				b.log.ErrorContext(context.Background(), "panic recovered", "error", r)
+				b.log.Error("panic recovered", "error", r)
 			}
 		}()
 
@@ -130,7 +126,7 @@ func (b *Bot) recover(next tele.HandlerFunc) tele.HandlerFunc {
 func (b *Bot) chatIDMiddleware(next tele.HandlerFunc) tele.HandlerFunc {
 	return func(c tele.Context) error {
 		if c.Chat().ID != b.allowedChatID {
-			b.log.WarnContext(context.Background(), "unauthorized chat access blocked",
+			b.log.Warn("unauthorized chat access blocked",
 				"chat_id", c.Chat().ID,
 				"allowed_chat_id", b.allowedChatID,
 			)
@@ -151,7 +147,7 @@ func (b *Bot) handleError(next tele.HandlerFunc) tele.HandlerFunc {
 			if strings.HasPrefix(c.Message().Text, "/") {
 				args = append(args, "command", strings.Split(c.Message().Text, " ")[0])
 			}
-			b.log.ErrorContext(context.Background(), "error occurred", args...)
+			b.log.Error("error occurred", args...)
 			return c.Send(defaultErrorMsg)
 		}
 		return err

@@ -50,11 +50,20 @@ func run(ctx context.Context) int {
 		return 1
 	}
 
+	botErrChan := make(chan error, 1)
 	go func() {
 		if err := bot.Start(ctx); err != nil {
-			log.ErrorContext(ctx, "bot failed", "error", err)
+			botErrChan <- err
 		}
 	}()
+
+	select {
+	case err := <-botErrChan:
+		log.ErrorContext(ctx, "bot failed to start", "error", err)
+		return 1
+	case <-time.After(2 * time.Second): //nolint:mnd // reasonable startup timeout
+		log.InfoContext(ctx, "bot started successfully")
+	}
 
 	scheduler, err := gocron.NewScheduler(gocron.WithLocation(loc))
 	if err != nil {
