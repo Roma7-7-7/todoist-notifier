@@ -1,0 +1,35 @@
+[Unit]
+Description=Todoist Telegram Notifier
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User={{SERVICE_USER}}
+Group={{SERVICE_USER}}
+WorkingDirectory=/opt/todoist-notifier
+
+# Load environment variables from file
+EnvironmentFile=/opt/todoist-notifier/.env
+
+ExecStart=/opt/todoist-notifier/bin/todoist-notifier-daemon
+
+# Restart configuration
+Restart=always
+RestartSec=10s
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=todoist-notifier
+
+# Resource limits
+MemoryMax=256M
+CPUQuota=50%
+
+[Install]
+WantedBy=multi-user.target

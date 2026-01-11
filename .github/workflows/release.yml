@@ -75,15 +75,16 @@ jobs:
 
             **Deployment:**
 
-            **Lambda (AWS):**
-            - Upload `todoist-notifier-lambda-arm.zip` to your Lambda function
-            - Lambda must be configured for ARM64 architecture
+            See [deployment/README.md](https://github.com/Roma7-7-7/todoist-notifier/blob/main/deployment/README.md) for detailed instructions.
 
-            **Daemon (EC2):**
-            - Download the appropriate binary for your instance architecture
-            - AMD64 for traditional x86_64 instances (t3, m5, c5, etc.)
-            - ARM64 for Graviton instances (t4g, m6g, c6g, etc.)
-            - Replace existing binary and restart the service
+            **Quick deployment (daemon mode):**
+            ```bash
+            # One-time setup
+            curl -fsSL https://raw.githubusercontent.com/Roma7-7-7/todoist-notifier/main/deployment/setup.sh | sudo bash
+
+            # Update to this release
+            /opt/todoist-notifier/deploy.sh
+            ```
           files: |
             bin/todoist-notifier-lambda-arm.zip
             bin/todoist-notifier-daemon-amd64
