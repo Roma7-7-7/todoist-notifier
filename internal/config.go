@@ -31,7 +31,7 @@ func GetConfig(ctx context.Context) (*Config, error) {
 	}
 	telegramChatID := os.Getenv("TELEGRAM_CHAT_ID")
 	if res.Schedule == "" {
-		res.Schedule = "0 * 9-23 * * *"
+		res.Schedule = "0 9-23 * * *"
 	}
 	if res.Location == "" {
 		res.Location = "Europe/Kyiv"
