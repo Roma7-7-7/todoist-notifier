@@ -15,6 +15,11 @@ import (
 	"github.com/go-co-op/gocron/v2"
 )
 
+var (
+	Version   = "dev"     //nolint:gochecknoglobals // version is a global variable
+	BuildTime = "unknown" //nolint:gochecknoglobals // build time is a global variable
+)
+
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	exitCode := run(ctx)
@@ -30,6 +35,7 @@ func run(ctx context.Context) int {
 	}
 
 	log := internal.NewLogger(conf.Dev)
+	log.InfoContext(ctx, "todoist-notifier daemon starting", "version", Version, "build_time", BuildTime)
 
 	httpClient := &http.Client{
 		Timeout: 5 * time.Second, //nolint:mnd // reasonable timeout

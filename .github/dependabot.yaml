@@ -26,28 +26,21 @@ updates:
       prefix: "go"
       include: "scope"
 
-  # JavaScript/npm packages for the web directory
-  - package-ecosystem: "npm"
-    directory: "/web"
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
     schedule:
       interval: "weekly"
-    # Only raise PRs for minor and patch updates
-    ignore:
-      - dependency-name: "*"
-        update-types: ["version-update:semver-major"]
-    # Group all dependencies into a single PR
+    # Group all GitHub Actions updates into a single PR
     groups:
-      npm-dependencies:
+      github-actions:
         patterns:
           - "*"
-        update-types:
-          - "minor"
-          - "patch"
     # Additional configuration options
     open-pull-requests-limit: 10
     labels:
       - "dependencies"
-      - "javascript"
+      - "github-actions"
     commit-message:
-      prefix: "npm"
+      prefix: "ci"
       include: "scope"
