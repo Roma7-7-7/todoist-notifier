@@ -10,6 +10,15 @@ import (
 	"github.com/Roma7-7-7/todoist-notifier/pkg/todoist"
 )
 
+type Priority int
+
+const (
+	P1 Priority = 4
+	P2 Priority = 3
+	P3 Priority = 2
+	P4 Priority = 1
+)
+
 var tasksTemplate = template.Must(template.New("tasks").
 	Funcs(template.FuncMap{
 		"toCircle": toCircle,
@@ -32,20 +41,40 @@ func FilterAndSortTasks(tasks []todoist.Task, now time.Time, filterByTime bool) 
 			continue
 		}
 
+		if !filterByTime {
+			res = append(res, t)
+			continue
+		}
+
 		labels := timeLabels(t)
-		switch {
-		case !filterByTime:
-			res = append(res, t)
-		case labels["12pm"] && now.Hour() < 12:
-			continue
-		case labels["3pm"] && now.Hour() < 15:
-			continue
-		case labels["6pm"] && now.Hour() < 18:
-			continue
-		case labels["9pm"] && now.Hour() < 21:
-			continue
-		default:
-			res = append(res, t)
+		hasTimeLabel := len(labels) > 0
+
+		if hasTimeLabel {
+			switch {
+			case labels["12pm"] && now.Hour() < 12:
+				continue
+			case labels["3pm"] && now.Hour() < 15:
+				continue
+			case labels["6pm"] && now.Hour() < 18:
+				continue
+			case labels["9pm"] && now.Hour() < 21:
+				continue
+			default:
+				res = append(res, t)
+			}
+		} else {
+			switch Priority(t.Priority) {
+			case P1, P4:
+				res = append(res, t)
+			case P2:
+				if now.Hour() >= 15 { //nolint:mnd // 3pm
+					res = append(res, t)
+				}
+			case P3:
+				if now.Hour() >= 18 { //nolint:mnd // 6pm
+					res = append(res, t)
+				}
+			}
 		}
 	}
 
