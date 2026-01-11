@@ -15,8 +15,8 @@ import (
 )
 
 var (
-	Version   = "dev"
-	BuildTime = "unknown"
+	Version   = "dev"     //nolint:gochecknoglobals // version is a global variable
+	BuildTime = "unknown" //nolint:gochecknoglobals // build time is a global variable
 )
 
 func main() {
