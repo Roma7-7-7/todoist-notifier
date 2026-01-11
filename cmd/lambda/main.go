@@ -14,6 +14,11 @@ import (
 	"github.com/aws/aws-lambda-go/lambda"
 )
 
+var (
+	Version   = "dev"
+	BuildTime = "unknown"
+)
+
 func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second) //nolint:mnd // it's ok
 	exitCode := run(ctx)
@@ -33,6 +38,7 @@ func run(ctx context.Context) int {
 	}
 
 	log := internal.NewLogger(conf.Dev)
+	log.InfoContext(ctx, "todoist-notifier lambda starting", "version", Version, "build_time", BuildTime)
 
 	todoistClient := todoist.NewClient(conf.TodoistToken, httpClient, 5, time.Second, log)
 	messagePublisher := telegram.NewClient(httpClient, conf.TelegramToken)
