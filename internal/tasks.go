@@ -51,13 +51,13 @@ func FilterAndSortTasks(tasks []todoist.Task, now time.Time, filterByTime bool) 
 
 		if hasTimeLabel {
 			switch {
-			case labels["12pm"] && now.Hour() < 12:
+			case labels["12pm"] && now.Hour() < 12: //nolint:mnd // 12pm
 				continue
-			case labels["3pm"] && now.Hour() < 15:
+			case labels["3pm"] && now.Hour() < 15: //nolint:mnd // 3pm
 				continue
-			case labels["6pm"] && now.Hour() < 18:
+			case labels["6pm"] && now.Hour() < 18: //nolint:mnd // 6pm
 				continue
-			case labels["9pm"] && now.Hour() < 21:
+			case labels["9pm"] && now.Hour() < 21: //nolint:mnd // 9pm
 				continue
 			default:
 				res = append(res, t)
@@ -67,11 +67,11 @@ func FilterAndSortTasks(tasks []todoist.Task, now time.Time, filterByTime bool) 
 			case P1, P4:
 				res = append(res, t)
 			case P2:
-				if now.Hour() >= 15 {
+				if now.Hour() >= 15 { //nolint:mnd // 3pm
 					res = append(res, t)
 				}
 			case P3:
-				if now.Hour() >= 18 {
+				if now.Hour() >= 18 { //nolint:mnd // 6pm
 					res = append(res, t)
 				}
 			}
