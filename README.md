@@ -17,6 +17,8 @@ Example: A task labeled `3pm` won't appear in notifications until 3 PM, even if 
 
 **Daemon** - Long-running process with cron scheduler (e.g., hourly from 9am-11pm)
 
+**For deployment instructions**, see [deployment/README.md](deployment/README.md)
+
 ## Quick Start
 
 **Build:**
