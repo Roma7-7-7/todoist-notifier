@@ -36,7 +36,9 @@ func GetConfig(ctx context.Context) (*Config, error) {
 	if res.Location == "" {
 		res.Location = "Europe/Kyiv"
 	}
-	if res.Dev && os.Getenv("FORCE_SSM") != "true" {
+
+	// In dev mode or if all required params are set via env vars, skip SSM
+	if res.Dev || hasRequiredParams(res, telegramChatID) {
 		if err := res.validate(telegramChatID); err != nil {
 			return nil, err
 		}
@@ -45,7 +47,7 @@ func GetConfig(ctx context.Context) (*Config, error) {
 
 	cfg, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("load aws config: %w", err)
+		return nil, fmt.Errorf("load aws config (set required env vars to skip SSM): %w", err)
 	}
 	ssmClient := ssm.NewFromConfig(cfg)
 
@@ -55,7 +57,7 @@ func GetConfig(ctx context.Context) (*Config, error) {
 		"/todoist-notifier-bot/prod/telegram-chat-id": &telegramChatID,
 	}, pkgSSM.WithDecryption())
 	if err != nil {
-		return nil, fmt.Errorf("fetch SSM parameters: %w", err)
+		return nil, fmt.Errorf("fetch SSM parameters (set required env vars to skip SSM): %w", err)
 	}
 
 	if err := res.validate(telegramChatID); err != nil {
@@ -63,6 +65,11 @@ func GetConfig(ctx context.Context) (*Config, error) {
 	}
 
 	return res, nil
+}
+
+// hasRequiredParams checks if all required parameters are already set via environment variables
+func hasRequiredParams(conf *Config, telegramChatID string) bool {
+	return conf.TodoistToken != "" && conf.TelegramToken != "" && telegramChatID != ""
 }
 
 func (c *Config) validate(telegramChatID string) error {

@@ -85,8 +85,9 @@ ENV=dev TOKEN=<token> go run cmd/app/main.go
 - Interfaces `TodoistClient` and `HTTPMessagePublisher` enable testing/mocking
 
 **Configuration Management** (`internal/config.go`)
-- Supports dual configuration sources: environment variables (dev) or AWS SSM Parameter Store (prod)
-- Uses `FORCE_SSM=true` to override dev mode and force SSM usage
+- Supports dual configuration sources: environment variables or AWS SSM Parameter Store
+- **Simple deployment**: If all required env vars are set (`TODOIST_TOKEN`, `TELEGRAM_BOT_ID`, `TELEGRAM_CHAT_ID`), SSM is automatically skipped
+- **AWS deployment**: If required env vars are missing, SSM Parameter Store is used (requires AWS credentials)
 - Timezone configuration via `LOCATION` env var (defaults to "Europe/Kyiv")
 - `SCHEDULE` env var for daemon mode cron expression (defaults to "0 * 9-23 * * *" - every hour from 9am to 11pm)
 
@@ -147,16 +148,17 @@ The Lambda function expects:
 **Environment Variables:**
 - `ENV`: Set to "prod" (default) or "dev"
 - `LOCATION`: Timezone (default: "Europe/Kyiv")
-- `FORCE_SSM`: Set to "true" to force SSM usage in dev mode
+
+**Note**: Lambda deployments typically use SSM for secrets. If you want to test Lambda locally with env vars, set `TODOIST_TOKEN`, `TELEGRAM_BOT_ID`, and `TELEGRAM_CHAT_ID` to skip SSM.
 
 ### Daemon Deployment (EC2)
 The daemon binary can run on any Linux EC2 instance:
 
 **Environment Variables:**
 - `ENV`: Set to "prod" (default) or "dev"
-- `TODOIST_TOKEN`: Todoist API token (or use SSM)
-- `TELEGRAM_BOT_ID`: Telegram bot token (or use SSM)
-- `TELEGRAM_CHAT_ID`: Telegram chat ID (or use SSM)
+- `TODOIST_TOKEN`: Todoist API token (required for simple deployment, optional if using SSM)
+- `TELEGRAM_BOT_ID`: Telegram bot token (required for simple deployment, optional if using SSM)
+- `TELEGRAM_CHAT_ID`: Telegram chat ID (required for simple deployment, optional if using SSM)
 - `SCHEDULE`: Cron expression for notification schedule - defaults to "0 * 9-23 * * *" (every hour from 9am to 11pm)
   - Format: `minute hour day month weekday` (standard cron without seconds)
   - Examples:
@@ -165,9 +167,48 @@ The daemon binary can run on any Linux EC2 instance:
     - `"0 9,12,15,18,21 * * *"` - At 9am, 12pm, 3pm, 6pm, and 9pm
     - `"*/15 * * * *"` - Every 15 minutes (all day)
 - `LOCATION`: Timezone (default: "Europe/Kyiv")
-- `FORCE_SSM`: Set to "true" to use SSM Parameter Store with EC2 instance profile
 
-**Running as systemd service:**
+**Deployment Options:**
+
+**Option 1: Simple deployment with environment variables (recommended for non-AWS)**
+```bash
+ENV=prod \
+SCHEDULE="0 * 9-23 * * *" \
+TODOIST_TOKEN=<token> \
+TELEGRAM_BOT_ID=<bot_id> \
+TELEGRAM_CHAT_ID=<chat_id> \
+./todoist-notifier-daemon
+```
+
+**Option 2: AWS deployment with SSM Parameter Store**
+- Attach IAM instance profile with `ssm:GetParameters` permission
+- Store secrets in SSM at `/todoist-notifier-bot/prod/{todoist-token,telegram-token,telegram-chat-id}`
+- Don't set `TODOIST_TOKEN`, `TELEGRAM_BOT_ID`, or `TELEGRAM_CHAT_ID` env vars (SSM will be used automatically)
+
+**Running as systemd service (simple deployment):**
+```ini
+[Unit]
+Description=Todoist Telegram Notifier
+After=network.target
+
+[Service]
+Type=simple
+User=your-user
+Environment="ENV=prod"
+Environment="SCHEDULE=0 * 9-23 * * *"
+Environment="LOCATION=Europe/Kyiv"
+Environment="TODOIST_TOKEN=your-token"
+Environment="TELEGRAM_BOT_ID=your-bot-id"
+Environment="TELEGRAM_CHAT_ID=your-chat-id"
+ExecStart=/usr/local/bin/todoist-notifier-daemon
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+```
+
+**Running as systemd service (SSM deployment):**
 ```ini
 [Unit]
 Description=Todoist Telegram Notifier
@@ -178,7 +219,6 @@ Type=simple
 User=ec2-user
 Environment="ENV=prod"
 Environment="SCHEDULE=0 * 9-23 * * *"
-Environment="FORCE_SSM=true"
 Environment="LOCATION=Europe/Kyiv"
 ExecStart=/usr/local/bin/todoist-notifier-daemon
 Restart=always
@@ -188,12 +228,7 @@ RestartSec=10
 WantedBy=multi-user.target
 ```
 
-**With SSM (recommended):**
-- Attach IAM instance profile with `ssm:GetParameters` permission
-- Store secrets in SSM at `/todoist-notifier-bot/prod/{todoist-token,telegram-token,telegram-chat-id}`
-- Set `FORCE_SSM=true` environment variable
-
-**With environment variables:**
+**With environment variables (deprecated, use Option 1 or 2 above):**
 ```bash
 ENV=prod \
 SCHEDULE="0 * 9-23 * * *" \
@@ -220,12 +255,11 @@ TELEGRAM_CHAT_ID=<chat_id> \
 
 **Current environment variables (all defined in Config struct):**
 - `ENV` → `Config.Dev` (bool) - defaults to false (prod mode)
-- `TODOIST_TOKEN` → `Config.TodoistToken` - required
-- `TELEGRAM_BOT_ID` → `Config.TelegramToken` - required
-- `TELEGRAM_CHAT_ID` → `Config.TelegramChatID` - required
+- `TODOIST_TOKEN` → `Config.TodoistToken` - required (via env or SSM)
+- `TELEGRAM_BOT_ID` → `Config.TelegramToken` - required (via env or SSM)
+- `TELEGRAM_CHAT_ID` → `Config.TelegramChatID` - required (via env or SSM)
 - `SCHEDULE` → `Config.Schedule` - defaults to "0 * 9-23 * * *" (every hour from 9am to 11pm)
 - `LOCATION` → `Config.Location` - defaults to "Europe/Kyiv"
-- `FORCE_SSM` - special flag to force SSM usage in dev mode (read directly in GetConfig, not stored)
 
 **Example:**
 ```go
