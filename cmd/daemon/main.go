@@ -80,7 +80,7 @@ func run(ctx context.Context) int {
 	job, err := scheduler.NewJob(
 		gocron.CronJob(conf.Schedule, false),
 		gocron.NewTask(func() {
-			if err := bot.SendTasks(conf.TelegramChatID, true); err != nil {
+			if err := bot.SendTasks(conf.TelegramChatID, false); err != nil {
 				log.ErrorContext(ctx, "failed to send notification", "error", err)
 			}
 		}),

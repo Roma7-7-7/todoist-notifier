@@ -69,10 +69,10 @@ func (b *Bot) registerHandlers() {
 }
 
 func (b *Bot) handleTasks(c tele.Context) error {
-	return b.SendTasks(c.Chat().ID, false)
+	return b.SendTasks(c.Chat().ID, true)
 }
 
-func (b *Bot) SendTasks(chatID int64, silentIfEmpty bool) error {
+func (b *Bot) SendTasks(chatID int64, manualRequestMode bool) error {
 	ctx, cancel := b.context()
 	defer cancel()
 
@@ -83,7 +83,7 @@ func (b *Bot) SendTasks(chatID int64, silentIfEmpty bool) error {
 		return fmt.Errorf("get tasks: %w", err)
 	}
 
-	tasks = FilterAndSortTasks(tasks, b.clock.Now(), false)
+	tasks = FilterAndSortTasks(tasks, b.clock.Now(), !manualRequestMode)
 
 	var msg string
 	switch {
@@ -92,9 +92,9 @@ func (b *Bot) SendTasks(chatID int64, silentIfEmpty bool) error {
 		if err != nil {
 			return fmt.Errorf("render tasks message: %w", err)
 		}
-	case len(tasks) == 0 && !silentIfEmpty:
+	case len(tasks) == 0 && manualRequestMode:
 		msg = "No tasks for today! 🎉"
-	case len(tasks) == 0 && silentIfEmpty:
+	case len(tasks) == 0 && !manualRequestMode:
 		b.log.DebugContext(ctx, "no tasks to send")
 		return nil
 	}
