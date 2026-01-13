@@ -1,14 +1,14 @@
-package internal_test
+package tasks_test
 
 import (
 	"testing"
 	"time"
 
-	"github.com/Roma7-7-7/todoist-notifier/internal"
+	"github.com/Roma7-7-7/todoist-notifier/internal/tasks"
 	"github.com/Roma7-7-7/todoist-notifier/pkg/todoist"
 )
 
-func TestFilterAndSortTasks_PriorityFiltering(t *testing.T) {
+func TestFilterToday_PriorityFiltering(t *testing.T) {
 	date := "2026-01-11"
 	tests := []struct {
 		name     string
@@ -118,7 +118,7 @@ func TestFilterAndSortTasks_PriorityFiltering(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			now := time.Date(2026, 1, 11, tt.hour, 0, 0, 0, time.UTC)
-			result := internal.FilterAndSortTasks(tt.tasks, now, true)
+			result := tasks.FilterToday(tt.tasks, now, true)
 
 			if len(result) != len(tt.expected) {
 				t.Errorf("expected %d tasks, got %d", len(tt.expected), len(result))

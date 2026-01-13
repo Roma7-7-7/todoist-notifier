@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/Roma7-7-7/todoist-notifier/internal"
+	"github.com/Roma7-7-7/todoist-notifier/internal/tasks"
+	"github.com/Roma7-7-7/todoist-notifier/internal/telegram"
 	"github.com/Roma7-7-7/todoist-notifier/pkg/clock"
 	"github.com/Roma7-7-7/todoist-notifier/pkg/todoist"
 	"github.com/go-co-op/gocron/v2"
@@ -50,7 +52,9 @@ func run(ctx context.Context) int {
 	}
 	clock := clock.NewZonedClock(loc)
 
-	bot, err := internal.NewBot(conf.TelegramToken, todoistClient, conf.TelegramChatID, clock, log)
+	taskService := tasks.NewService(todoistClient, clock, 24*time.Hour) //nolint:mnd // 24 hours cache
+
+	bot, err := telegram.NewBot(conf.TelegramToken, taskService, conf.TelegramChatID, clock, log)
 	if err != nil {
 		log.ErrorContext(ctx, "failed to create bot", "error", err)
 		return 1
@@ -77,7 +81,7 @@ func run(ctx context.Context) int {
 		return 1
 	}
 
-	job, err := scheduler.NewJob(
+	notificationJob, err := scheduler.NewJob(
 		gocron.CronJob(conf.Schedule, false),
 		gocron.NewTask(func() {
 			if err := bot.SendTasks(conf.TelegramChatID, false); err != nil {
@@ -86,19 +90,41 @@ func run(ctx context.Context) int {
 		}),
 	)
 	if err != nil {
-		log.ErrorContext(ctx, "failed to create job", "error", err, "schedule", conf.Schedule)
+		log.ErrorContext(ctx, "failed to create notification job", "error", err, "schedule", conf.Schedule)
+		return 1
+	}
+
+	prioritizerJob, err := scheduler.NewJob(
+		gocron.CronJob(conf.PrioritizerSchedule, false),
+		gocron.NewTask(func() {
+			if err := bot.Prioritize(conf.TelegramChatID); err != nil {
+				log.ErrorContext(ctx, "failed to run prioritizer", "error", err)
+			}
+		}),
+	)
+	if err != nil {
+		log.ErrorContext(ctx, "failed to create prioritizer job", "error", err, "schedule", conf.PrioritizerSchedule)
 		return 1
 	}
 
 	scheduler.Start()
 
-	nextRun, err := job.NextRun()
+	notificationNextRun, err := notificationJob.NextRun()
 	if err != nil {
-		log.WarnContext(ctx, "failed to get next run time", "error", err)
-		log.InfoContext(ctx, "starting daemon", "schedule", conf.Schedule, "timezone", conf.Location)
-	} else {
-		log.InfoContext(ctx, "starting daemon", "schedule", conf.Schedule, "timezone", conf.Location, "next_run", nextRun)
+		log.WarnContext(ctx, "failed to get notification next run time", "error", err)
 	}
+
+	prioritizerNextRun, err := prioritizerJob.NextRun()
+	if err != nil {
+		log.WarnContext(ctx, "failed to get prioritizer next run time", "error", err)
+	}
+
+	log.InfoContext(ctx, "starting daemon",
+		"notification_schedule", conf.Schedule,
+		"notification_next_run", notificationNextRun,
+		"prioritizer_schedule", conf.PrioritizerSchedule,
+		"prioritizer_next_run", prioritizerNextRun,
+		"timezone", conf.Location)
 	defer func() {
 		if err := scheduler.Shutdown(); err != nil {
 			log.ErrorContext(ctx, "failed to shutdown scheduler", "error", err)

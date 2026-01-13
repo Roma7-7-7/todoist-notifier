@@ -63,7 +63,8 @@ ENV=dev TODOIST_TOKEN=<token> TELEGRAM_BOT_ID=<bot_id> TELEGRAM_CHAT_ID=<chat_id
 The daemon mode includes:
 - Cron scheduler for automated notifications (configured via `SCHEDULE`)
 - Interactive Telegram bot responding to `/tasks` command
-- Both components run in the same process and share notification logic
+- Task prioritizer that sends interactive messages for unprioritized tasks (configured via `PRIORITIZER_SCHEDULE`)
+- All components run in the same process and share notification logic
 
 **Testing the Todoist client:**
 ```bash
@@ -114,16 +115,37 @@ ENV=dev TOKEN=<token> go run cmd/app/main.go
 - Runs alongside scheduler in daemon mode (both share same `Notifier` instance)
 - Chat ID validation middleware blocks unauthorized access
 - `/tasks` command - returns filtered tasks for current time
+- `/prioritize` command - manually trigger prioritization flow for tomorrow's unprioritized tasks
+- `Prioritize(ctx)` method - can be called by command handler or scheduled job
 - Reuses existing task filtering and message rendering logic
 - Graceful shutdown on context cancellation
+
+**Task Prioritizer** (`internal/prioritizer.go`)
+- Interactive task prioritization system for daemon mode
+- Checks for tomorrow's unprioritized tasks (P4/default priority OR tasks with priority but no time labels)
+- Sends step-by-step interactive messages with inline keyboard buttons:
+  1. Priority selection (P1/P2/P3/P4)
+  2. Time label selection for P1 (12pm/none) or P4 (9pm/none)
+  3. Project move confirmation (yes/no)
+  4. Project selection from cached list
+- Uses callback handlers for multi-step user interaction
+- State management with 24-hour TTL for tracking user progress
+- Applies all changes to Todoist via UpdateTask API
+
+**Project Cache** (`internal/project_cache.go`)
+- In-memory cache for Todoist projects with configurable TTL (default 24 hours)
+- Thread-safe with RWMutex for concurrent access
+- Double-checked locking pattern to prevent duplicate API calls
+- Automatically refreshes stale cache on demand
 
 ### External Packages
 
 **pkg/todoist** - Todoist REST API client
 - `GetTasks(ctx, isCompleted)` - Fetch tasks with completion status filter
+- `GetProjects(ctx)` - Fetch all projects for the authenticated user
 - `UpdateTask(ctx, taskID, updateReq)` - Update task priority and labels
 - Built-in retry logic with configurable retries and delay
-- Returns structured `Task` objects with ID, Content, Priority, Due date, Labels
+- Returns structured `Task` and `Project` objects
 
 **pkg/ssm** - AWS Systems Manager Parameter Store wrapper
 - `FetchParameters()` helper for batch parameter retrieval with decryption support
@@ -166,6 +188,9 @@ The daemon binary can run on any Linux EC2 instance:
     - `"0,30 * 9-23 * * *"` - Every 30 minutes from 9am to 11pm
     - `"0 9,12,15,18,21 * * *"` - At 9am, 12pm, 3pm, 6pm, and 9pm
     - `"*/15 * * * *"` - Every 15 minutes (all day)
+- `PRIORITIZER_SCHEDULE`: Cron expression for prioritizer check - defaults to "0 21 * * *" (daily at 9pm)
+  - Same format as `SCHEDULE`
+  - Checks for unprioritized tasks due tomorrow and sends interactive prioritization UI
 - `LOCATION`: Timezone (default: "Europe/Kyiv")
 
 **Deployment Options:**
@@ -174,6 +199,7 @@ The daemon binary can run on any Linux EC2 instance:
 ```bash
 ENV=prod \
 SCHEDULE="0 * 9-23 * * *" \
+PRIORITIZER_SCHEDULE="0 21 * * *" \
 TODOIST_TOKEN=<token> \
 TELEGRAM_BOT_ID=<bot_id> \
 TELEGRAM_CHAT_ID=<chat_id> \
@@ -196,6 +222,7 @@ Type=simple
 User=your-user
 Environment="ENV=prod"
 Environment="SCHEDULE=0 * 9-23 * * *"
+Environment="PRIORITIZER_SCHEDULE=0 21 * * *"
 Environment="LOCATION=Europe/Kyiv"
 Environment="TODOIST_TOKEN=your-token"
 Environment="TELEGRAM_BOT_ID=your-bot-id"
@@ -219,6 +246,7 @@ Type=simple
 User=ec2-user
 Environment="ENV=prod"
 Environment="SCHEDULE=0 * 9-23 * * *"
+Environment="PRIORITIZER_SCHEDULE=0 21 * * *"
 Environment="LOCATION=Europe/Kyiv"
 ExecStart=/usr/local/bin/todoist-notifier-daemon
 Restart=always
@@ -226,16 +254,6 @@ RestartSec=10
 
 [Install]
 WantedBy=multi-user.target
-```
-
-**With environment variables (deprecated, use Option 1 or 2 above):**
-```bash
-ENV=prod \
-SCHEDULE="0 * 9-23 * * *" \
-TODOIST_TOKEN=<token> \
-TELEGRAM_BOT_ID=<bot_id> \
-TELEGRAM_CHAT_ID=<chat_id> \
-./todoist-notifier-daemon
 ```
 
 ## Development Notes
@@ -259,6 +277,7 @@ TELEGRAM_CHAT_ID=<chat_id> \
 - `TELEGRAM_BOT_ID` → `Config.TelegramToken` - required (via env or SSM)
 - `TELEGRAM_CHAT_ID` → `Config.TelegramChatID` - required (via env or SSM)
 - `SCHEDULE` → `Config.Schedule` - defaults to "0 * 9-23 * * *" (every hour from 9am to 11pm)
+- `PRIORITIZER_SCHEDULE` → `Config.PrioritizerSchedule` - defaults to "0 21 * * *" (daily at 9pm)
 - `LOCATION` → `Config.Location` - defaults to "Europe/Kyiv"
 
 **Example:**

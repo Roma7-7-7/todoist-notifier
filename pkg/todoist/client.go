@@ -11,6 +11,13 @@ import (
 
 const baseURL = "https://api.todoist.com/rest"
 
+const (
+	P1 Priority = 4
+	P2 Priority = 3
+	P3 Priority = 2
+	P4 Priority = 1
+)
+
 type (
 	Logger interface {
 		DebugContext(ctx context.Context, msg string, fields ...any)
@@ -22,11 +29,13 @@ type (
 		Do(req *http.Request) (*http.Response, error)
 	}
 
+	Priority int
+
 	Task struct {
 		ID        string   `json:"id"`
 		ProjectID string   `json:"project_id"`
 		Content   string   `json:"content"`
-		Priority  int      `json:"priority"`
+		Priority  Priority `json:"priority"`
 		Due       *TaskDue `json:"due"`
 		Labels    []string `json:"labels"`
 	}
@@ -35,8 +44,23 @@ type (
 		Date string `json:"date"`
 	}
 
+	Project struct {
+		ID             string `json:"id"`
+		Name           string `json:"name"`
+		Color          string `json:"color"`
+		ParentID       string `json:"parent_id"`
+		Order          int    `json:"order"`
+		CommentCount   int    `json:"comment_count"`
+		IsShared       bool   `json:"is_shared"`
+		IsFavorite     bool   `json:"is_favorite"`
+		IsInboxProject bool   `json:"is_inbox_project"`
+		IsTeamInbox    bool   `json:"is_team_inbox"`
+		ViewStyle      string `json:"view_style"`
+		URL            string `json:"url"`
+	}
+
 	UpdateTaskRequest struct {
-		Priority int      `json:"priority,omitempty,omitzero"`
+		Priority Priority `json:"priority,omitempty,omitzero"`
 		Labels   []string `json:"labels,omitempty,omitzero"`
 	}
 
@@ -78,6 +102,43 @@ func (c *Client) GetTasks(ctx context.Context, isCompleted bool) ([]Task, error)
 		"method", req.Method,
 		"token", c.token,
 		"is_completed", isCompleted)
+
+	resp, err := c.doWithRetry(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close() //nolint:errcheck // ignore
+
+	if resp.StatusCode != http.StatusOK {
+		c.log.WarnContext(ctx, "unexpected status code", "status_code", resp.StatusCode)
+
+		body := make([]byte, 1024) //nolint:mnd //it's ok
+		n, _ := resp.Body.Read(body)
+		c.log.DebugContext(ctx, "response payload", "payload", string(body[:n]))
+
+		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+
+	if err = json.NewDecoder(resp.Body).Decode(&res); err != nil {
+		return nil, fmt.Errorf("decode response: %w", err)
+	}
+
+	return res, nil
+}
+
+func (c *Client) GetProjects(ctx context.Context) ([]Project, error) {
+	res := make([]Project, 0, 50)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/v2/projects", nil)
+	if err != nil {
+		return nil, fmt.Errorf("create request: %w", err)
+	}
+
+	req.Header.Set("Authorization", "Bearer "+c.token)
+
+	c.log.DebugContext(ctx, "sending get projects request",
+		"url", req.URL.String(),
+		"method", req.Method)
 
 	resp, err := c.doWithRetry(ctx, req)
 	if err != nil {

@@ -4,6 +4,10 @@ import (
 	"time"
 )
 
+type Interface interface {
+	Now() time.Time
+}
+
 type Clock struct {
 	now func() time.Time
 }

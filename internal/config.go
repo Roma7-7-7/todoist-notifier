@@ -13,25 +13,30 @@ import (
 )
 
 type Config struct {
-	Dev            bool
-	TodoistToken   string
-	TelegramToken  string
-	TelegramChatID int64
-	Schedule       string
-	Location       string
+	Dev                 bool
+	TodoistToken        string
+	TelegramToken       string
+	TelegramChatID      int64
+	Schedule            string
+	PrioritizerSchedule string
+	Location            string
 }
 
 func GetConfig(ctx context.Context) (*Config, error) {
 	res := &Config{
-		Dev:           os.Getenv("ENV") == "dev",
-		TodoistToken:  os.Getenv("TODOIST_TOKEN"),
-		TelegramToken: os.Getenv("TELEGRAM_BOT_ID"),
-		Schedule:      os.Getenv("SCHEDULE"),
-		Location:      os.Getenv("LOCATION"),
+		Dev:                 os.Getenv("ENV") == "dev",
+		TodoistToken:        os.Getenv("TODOIST_TOKEN"),
+		TelegramToken:       os.Getenv("TELEGRAM_BOT_ID"),
+		Schedule:            os.Getenv("SCHEDULE"),
+		PrioritizerSchedule: os.Getenv("PRIORITIZER_SCHEDULE"),
+		Location:            os.Getenv("LOCATION"),
 	}
 	telegramChatID := os.Getenv("TELEGRAM_CHAT_ID")
 	if res.Schedule == "" {
 		res.Schedule = "0 9-23 * * *"
+	}
+	if res.PrioritizerSchedule == "" {
+		res.PrioritizerSchedule = "0 21 * * *"
 	}
 	if res.Location == "" {
 		res.Location = "Europe/Kyiv"
