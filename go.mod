@@ -4,7 +4,7 @@ go 1.25.5
 
 require (
 	github.com/Roma7-7-7/telegram v0.0.0-20251125113559-5142e2c67873
-	github.com/aws/aws-lambda-go v1.51.1
+	github.com/aws/aws-lambda-go v1.52.0
 	github.com/aws/aws-sdk-go-v2 v1.41.1
 	github.com/aws/aws-sdk-go-v2/config v1.32.7
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.67.8
