@@ -11,10 +11,11 @@ import (
 func TestFilterAndSortTasks_PriorityFiltering(t *testing.T) {
 	date := "2026-01-11"
 	tests := []struct {
-		name     string
-		tasks    []todoist.Task
-		hour     int
-		expected []string
+		name              string
+		tasks             []todoist.Task
+		hour              int
+		excludeProjectIDs []string
+		expected          []string
 	}{
 		{
 			name: "P1 shows all the time",
@@ -113,12 +114,24 @@ func TestFilterAndSortTasks_PriorityFiltering(t *testing.T) {
 			hour:     19,
 			expected: []string{"P1 task", "P2 task", "P3 task", "P4 task"},
 		},
+		{
+			name: "mixed priorities at 7pm exclude projects",
+			tasks: []todoist.Task{
+				{ID: "17", Content: "P1 task", Priority: 4, Due: &todoist.TaskDue{Date: date}, ProjectID: "1"},
+				{ID: "18", Content: "P2 task", Priority: 3, Due: &todoist.TaskDue{Date: date}, ProjectID: "2"},
+				{ID: "19", Content: "P3 task", Priority: 2, Due: &todoist.TaskDue{Date: date}, ProjectID: "3"},
+				{ID: "20", Content: "P4 task", Priority: 1, Due: &todoist.TaskDue{Date: date}, ProjectID: "4"},
+			},
+			hour:              19,
+			excludeProjectIDs: []string{"2", "3"},
+			expected:          []string{"P1 task", "P4 task"},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			now := time.Date(2026, 1, 11, tt.hour, 0, 0, 0, time.UTC)
-			result := internal.FilterAndSortTasks(tt.tasks, now, true)
+			result := internal.FilterAndSortTasks(tt.tasks, now, true, tt.excludeProjectIDs)
 
 			if len(result) != len(tt.expected) {
 				t.Errorf("expected %d tasks, got %d", len(tt.expected), len(result))
