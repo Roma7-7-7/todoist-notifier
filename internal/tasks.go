@@ -29,15 +29,23 @@ var tasksTemplate = template.Must(template.New("tasks").
 {{- end}}
 `))
 
-func FilterAndSortTasks(tasks []todoist.Task, now time.Time, filterByTime bool) []todoist.Task {
+func FilterAndSortTasks(tasks []todoist.Task, now time.Time, filterByTime bool, ignoreProjects []string) []todoist.Task {
 	if len(tasks) == 0 {
 		return nil
 	}
 
+	ignoreProjectsMap := make(map[string]bool)
+	for _, project := range ignoreProjects {
+		ignoreProjectsMap[project] = true
+	}
 	date := now.Format("2006-01-02")
 	res := make([]todoist.Task, 0, len(tasks))
 	for _, t := range tasks {
 		if t.Due == nil || t.Due.Date != date {
+			continue
+		}
+
+		if ignoreProjectsMap[t.ProjectID] {
 			continue
 		}
 

@@ -14,26 +14,29 @@ type (
 	}
 
 	Notifier struct {
+		conf Config
+
 		todoistClient TodoistClient
 		msgPublisher  HTTPMessagePublisher
-		chatID        string
 
-		now func() time.Time
-		log *slog.Logger
+		chatID string
+		now    func() time.Time
+		log    *slog.Logger
 	}
 )
 
-func NewNotifier(conf *Config, todoistClient TodoistClient, msgPublisher HTTPMessagePublisher, log *slog.Logger) (*Notifier, error) {
+func NewNotifier(conf Config, todoistClient TodoistClient, msgPublisher HTTPMessagePublisher, log *slog.Logger) (*Notifier, error) {
 	loc, err := time.LoadLocation(conf.Location)
 	if err != nil {
 		return nil, fmt.Errorf("error loading timezone %q: %w", conf.Location, err)
 	}
 
 	return &Notifier{
+		conf:          conf,
 		todoistClient: todoistClient,
 		msgPublisher:  msgPublisher,
-		chatID:        strconv.FormatInt(conf.TelegramChatID, 10),
 
+		chatID: strconv.FormatInt(conf.TelegramChatID, 10),
 		now: func() time.Time {
 			return time.Now().In(loc)
 		},
@@ -49,7 +52,7 @@ func (n *Notifier) SendNotification(ctx context.Context) error {
 		return fmt.Errorf("get tasks: %w", err)
 	}
 
-	tasks = FilterAndSortTasks(tasks, n.now(), true)
+	tasks = FilterAndSortTasks(tasks, n.now(), true, n.conf.IgnoreProjectIDs)
 	if len(tasks) == 0 {
 		n.log.DebugContext(ctx, "no tasks for today")
 		return nil
