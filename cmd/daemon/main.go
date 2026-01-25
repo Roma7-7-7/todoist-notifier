@@ -9,10 +9,11 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/go-co-op/gocron/v2"
+
 	"github.com/Roma7-7-7/todoist-notifier/internal"
 	"github.com/Roma7-7-7/todoist-notifier/pkg/clock"
 	"github.com/Roma7-7-7/todoist-notifier/pkg/todoist"
-	"github.com/go-co-op/gocron/v2"
 )
 
 var (
@@ -50,7 +51,7 @@ func run(ctx context.Context) int {
 	}
 	clock := clock.NewZonedClock(loc)
 
-	bot, err := internal.NewBot(conf.TelegramToken, todoistClient, conf.TelegramChatID, clock, log)
+	bot, err := internal.NewBot(*conf, todoistClient, clock, log)
 	if err != nil {
 		log.ErrorContext(ctx, "failed to create bot", "error", err)
 		return 1

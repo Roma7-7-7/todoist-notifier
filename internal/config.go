@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
@@ -13,21 +14,23 @@ import (
 )
 
 type Config struct {
-	Dev            bool
-	TodoistToken   string
-	TelegramToken  string
-	TelegramChatID int64
-	Schedule       string
-	Location       string
+	Dev              bool
+	TodoistToken     string
+	TelegramToken    string
+	TelegramChatID   int64
+	Schedule         string
+	Location         string
+	IgnoreProjectIDs []string
 }
 
 func GetConfig(ctx context.Context) (*Config, error) {
 	res := &Config{
-		Dev:           os.Getenv("ENV") == "dev",
-		TodoistToken:  os.Getenv("TODOIST_TOKEN"),
-		TelegramToken: os.Getenv("TELEGRAM_BOT_ID"),
-		Schedule:      os.Getenv("SCHEDULE"),
-		Location:      os.Getenv("LOCATION"),
+		Dev:              os.Getenv("ENV") == "dev",
+		TodoistToken:     os.Getenv("TODOIST_TOKEN"),
+		TelegramToken:    os.Getenv("TELEGRAM_BOT_ID"),
+		Schedule:         os.Getenv("SCHEDULE"),
+		Location:         os.Getenv("LOCATION"),
+		IgnoreProjectIDs: strings.Split(os.Getenv("IGNORE_PROJECT_IDS"), ","),
 	}
 	telegramChatID := os.Getenv("TELEGRAM_CHAT_ID")
 	if res.Schedule == "" {

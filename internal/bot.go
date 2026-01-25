@@ -16,19 +16,18 @@ const (
 )
 
 type Bot struct {
-	bot *tele.Bot
+	conf Config
+	bot  *tele.Bot
 
 	todoistClient TodoistClient
 	clock         Clock
 
-	allowedChatID int64
-
 	log *slog.Logger
 }
 
-func NewBot(token string, todoistClient TodoistClient, allowedChatID int64, clock Clock, log *slog.Logger) (*Bot, error) {
+func NewBot(conf Config, todoistClient TodoistClient, clock Clock, log *slog.Logger) (*Bot, error) {
 	pref := tele.Settings{
-		Token:  token,
+		Token:  conf.TelegramToken,
 		Poller: &tele.LongPoller{},
 	}
 
@@ -38,9 +37,9 @@ func NewBot(token string, todoistClient TodoistClient, allowedChatID int64, cloc
 	}
 
 	bot := &Bot{
+		conf:          conf,
 		bot:           b,
 		todoistClient: todoistClient,
-		allowedChatID: allowedChatID,
 		clock:         clock,
 		log:           log,
 	}
@@ -83,7 +82,11 @@ func (b *Bot) SendTasks(chatID int64, manualRequestMode bool) error {
 		return fmt.Errorf("get tasks: %w", err)
 	}
 
-	tasks = FilterAndSortTasks(tasks, b.clock.Now(), !manualRequestMode)
+	ignoreProjects := b.conf.IgnoreProjectIDs
+	if manualRequestMode {
+		ignoreProjects = nil
+	}
+	tasks = FilterAndSortTasks(tasks, b.clock.Now(), !manualRequestMode, ignoreProjects)
 
 	var msg string
 	switch {
@@ -125,10 +128,10 @@ func (b *Bot) recover(next tele.HandlerFunc) tele.HandlerFunc {
 
 func (b *Bot) chatIDMiddleware(next tele.HandlerFunc) tele.HandlerFunc {
 	return func(c tele.Context) error {
-		if c.Chat().ID != b.allowedChatID {
+		if c.Chat().ID != b.conf.TelegramChatID {
 			b.log.Warn("unauthorized chat access blocked",
 				"chat_id", c.Chat().ID,
-				"allowed_chat_id", b.allowedChatID,
+				"allowed_chat_id", b.conf.TelegramChatID,
 			)
 			return c.Send("Unauthorized")
 		}
