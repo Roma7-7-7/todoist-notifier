@@ -47,7 +47,7 @@ func NewNotifier(conf Config, todoistClient TodoistClient, msgPublisher HTTPMess
 func (n *Notifier) SendNotification(ctx context.Context) error {
 	n.log.InfoContext(ctx, "sending notification")
 
-	tasks, err := n.todoistClient.GetTasks(ctx, false)
+	tasks, err := n.todoistClient.GetTasksLimit200(ctx, false)
 	if err != nil {
 		return fmt.Errorf("get tasks: %w", err)
 	}
