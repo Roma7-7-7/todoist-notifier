@@ -77,7 +77,7 @@ func (b *Bot) SendTasks(chatID int64, manualRequestMode bool) error {
 
 	b.log.DebugContext(ctx, "received /tasks command", "chat_id", chatID)
 
-	tasks, err := b.todoistClient.GetTasks(ctx, false)
+	tasks, err := b.todoistClient.GetTasksLimit200(ctx, false)
 	if err != nil {
 		return fmt.Errorf("get tasks: %w", err)
 	}

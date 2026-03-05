@@ -12,5 +12,5 @@ type Clock interface {
 }
 
 type TodoistClient interface {
-	GetTasks(ctx context.Context, includeCompleted bool) ([]todoist.Task, error)
+	GetTasksLimit200(ctx context.Context, includeCompleted bool) ([]todoist.Task, error)
 }

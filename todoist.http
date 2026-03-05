@@ -1,7 +1,7 @@
-@baseURL = https://api.todoist.com/rest
+@baseURL = https://api.todoist.com/api/v1
 
-### GET uncompletted teasks v2
-GET {{baseURL}}/v2/tasks?is_completed=false
+### GET uncompleted tasks v1
+GET {{baseURL}}/tasks?limit=200
 Authorization: Bearer {{token}}
 
 ###
