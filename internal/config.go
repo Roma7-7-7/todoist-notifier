@@ -5,15 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
-<<<<<<< Updated upstream
 	"strings"
-
-	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/service/ssm"
-
-	pkgSSM "github.com/Roma7-7-7/todoist-notifier/pkg/ssm"
-=======
->>>>>>> Stashed changes
 )
 
 type Config struct {
