@@ -6,11 +6,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-
-	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/service/ssm"
-
-	pkgSSM "github.com/Roma7-7-7/todoist-notifier/pkg/ssm"
 )
 
 type Config struct {
@@ -46,21 +41,6 @@ func GetConfig(ctx context.Context) (*Config, error) {
 			return nil, err
 		}
 		return res, nil
-	}
-
-	cfg, err := config.LoadDefaultConfig(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("load aws config (set required env vars to skip SSM): %w", err)
-	}
-	ssmClient := ssm.NewFromConfig(cfg)
-
-	err = pkgSSM.FetchParameters(ctx, ssmClient, map[string]*string{
-		"/todoist-notifier-bot/prod/todoist-token":    &res.TodoistToken,
-		"/todoist-notifier-bot/prod/telegram-token":   &res.TelegramToken,
-		"/todoist-notifier-bot/prod/telegram-chat-id": &telegramChatID,
-	}, pkgSSM.WithDecryption())
-	if err != nil {
-		return nil, fmt.Errorf("fetch SSM parameters (set required env vars to skip SSM): %w", err)
 	}
 
 	if err := res.validate(telegramChatID); err != nil {
