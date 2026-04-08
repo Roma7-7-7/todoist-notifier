@@ -1,6 +1,6 @@
 module github.com/Roma7-7-7/todoist-notifier
 
-go 1.26.1
+go 1.26.2
 
 require (
 	github.com/Roma7-7-7/telegram v0.0.0-20251125113559-5142e2c67873
