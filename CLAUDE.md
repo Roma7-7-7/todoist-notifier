@@ -4,37 +4,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a Go-based notification system that sends Telegram notifications for Todoist tasks. It supports two deployment modes:
-- **Lambda Mode**: Event-driven AWS Lambda function triggered by EventBridge
-- **Daemon Mode**: Long-running daemon for EC2 instances with configurable scheduling
-
-Both modes share the same core notification logic and filter tasks due today based on time labels (12pm, 3pm, 6pm, 9pm).
+This is a Go-based notification system that sends Telegram notifications for Todoist tasks. It runs as a long-running daemon with cron-based scheduling and an interactive Telegram bot, deployed via Docker. Tasks due today are filtered based on time labels (12pm, 3pm, 6pm, 9pm).
 
 ## Build and Development Commands
 
-### Build All
+### Build
 ```bash
 make build
 ```
-Builds both Lambda (ARM64) and daemon (AMD64) binaries.
-
-### Build Lambda Only
-```bash
-make build-lambda
-```
-Builds the Lambda ARM64 binary and creates a deployment zip at `./bin/todoist-notifier-lambda-arm.zip`.
-
-### Build Daemon (AMD64)
-```bash
-make build-daemon
-```
-Builds the daemon binary for x86_64 EC2 instances at `./bin/todoist-notifier-daemon`.
-
-### Build Daemon (ARM64)
-```bash
-make build-daemon-arm
-```
-Builds the daemon binary for ARM64/Graviton EC2 instances at `./bin/todoist-notifier-daemon-arm`.
+Builds the daemon binary at `./bin/todoist-notifier`.
 
 ### Lint
 ```bash
@@ -48,58 +26,41 @@ go test -v ./...
 ```
 Runs all tests in the project.
 
-### Local Development
-
-**Lambda mode (run once):**
+### Docker
 ```bash
-ENV=dev TODOIST_TOKEN=<token> TELEGRAM_BOT_ID=<bot_id> TELEGRAM_CHAT_ID=<chat_id> go run cmd/lambda/main.go
+make docker-build   # Build Docker image
+make docker-up      # Build and run with Docker Compose
+make docker-down    # Stop Docker Compose services
 ```
 
-**Daemon mode (runs continuously with scheduler + interactive bot):**
+### Local Development
+
 ```bash
 ENV=dev TODOIST_TOKEN=<token> TELEGRAM_BOT_ID=<bot_id> TELEGRAM_CHAT_ID=<chat_id> SCHEDULE="*/5 * * * *" go run cmd/daemon/main.go
 ```
 
-The daemon mode includes:
+The daemon includes:
 - Cron scheduler for automated notifications (configured via `SCHEDULE`)
 - Interactive Telegram bot responding to `/tasks` command
 - Both components run in the same process and share notification logic
 
-**Testing the Todoist client:**
-```bash
-ENV=dev TOKEN=<token> go run cmd/app/main.go
-```
-
 ## Architecture
 
 ### Entry Points
-- `cmd/lambda/main.go` - AWS Lambda entry point for event-driven deployment
-- `cmd/daemon/main.go` - Long-running daemon for EC2 instances with scheduler
-- `cmd/app/main.go` - Development/testing tool for direct Todoist API interaction
+- `cmd/daemon/main.go` - Long-running daemon with scheduler and interactive Telegram bot
 
 ### Core Components
 
-**Notification Engine** (`internal/notifier.go`)
-- `Notifier` struct - Core notification logic shared by both Lambda and daemon modes
-- `SendNotification(ctx)` - Fetches tasks, filters for today, renders message, sends via Telegram
-- Interfaces `TodoistClient` and `HTTPMessagePublisher` enable testing/mocking
-
 **Configuration Management** (`internal/config.go`)
-- Supports dual configuration sources: environment variables or AWS SSM Parameter Store
-- **Simple deployment**: If all required env vars are set (`TODOIST_TOKEN`, `TELEGRAM_BOT_ID`, `TELEGRAM_CHAT_ID`), SSM is automatically skipped
-- **AWS deployment**: If required env vars are missing, SSM Parameter Store is used (requires AWS credentials)
+- Configuration via environment variables
 - Timezone configuration via `LOCATION` env var (defaults to "Europe/Kyiv")
-- `SCHEDULE` env var for daemon mode cron expression (defaults to "0 * 9-23 * * *" - every hour from 9am to 11pm)
+- `SCHEDULE` env var for cron expression (defaults to "0 * 9-23 * * *" - every hour from 9am to 11pm)
 
 **Task Filtering Logic** (`internal/tasks.go`)
 - `FilterAndSortTasks()` implements time-based filtering using task labels
 - Tasks with time labels (12pm, 3pm, 6pm, 9pm) are filtered based on current hour
 - Tasks are sorted by priority (descending) then project ID
 - Template-based message rendering with priority-based emoji circles (🔴🟠🔵⚪)
-
-**Lambda Handler** (`internal/lambda.go`)
-- Thin wrapper around `Notifier` for AWS Lambda integration
-- Delegates all notification logic to shared `Notifier.SendNotification()`
 
 **Daemon Scheduler** (`cmd/daemon/main.go`)
 - Cron-based scheduling using gocron v2 library
@@ -111,7 +72,7 @@ ENV=dev TOKEN=<token> go run cmd/app/main.go
 
 **Bot Integration** (`internal/bot.go`)
 - Interactive Telegram bot using `gopkg.in/telebot.v3`
-- Runs alongside scheduler in daemon mode (both share same `Notifier` instance)
+- Runs alongside scheduler (both share same process)
 - Chat ID validation middleware blocks unauthorized access
 - `/tasks` command - returns filtered tasks for current time
 - Reuses existing task filtering and message rendering logic
@@ -125,40 +86,19 @@ ENV=dev TOKEN=<token> go run cmd/app/main.go
 - Built-in retry logic with configurable retries and delay
 - Returns structured `Task` objects with ID, Content, Priority, Due date, Labels
 
-**pkg/ssm** - AWS Systems Manager Parameter Store wrapper
-- `FetchParameters()` helper for batch parameter retrieval with decryption support
-
 ### Dependencies
-- AWS Lambda Go SDK for Lambda execution (Lambda mode only)
-- AWS SDK v2 for SSM parameter access
-- Custom Telegram client: `github.com/Roma7-7-7/telegram`
-- Telegram bot library: `gopkg.in/telebot.v3` (daemon mode only)
-- Cron scheduler: `github.com/go-co-op/gocron/v2` (daemon mode only)
-- Environment config: `github.com/kelseyhightower/envconfig`
+- Telegram bot library: `gopkg.in/telebot.v3`
+- Cron scheduler: `github.com/go-co-op/gocron/v2`
 
 ## Deployment
 
-### Lambda Deployment
-The Lambda function expects:
-- ARM64 architecture (cross-compiled in Makefile)
-- SSM parameters at `/todoist-notifier-bot/prod/{todoist-token,telegram-token,telegram-chat-id}`
-- Bootstrap binary naming for custom Lambda runtime
-- EventBridge rule for scheduling (e.g., every 30 minutes during 9am-11pm)
+Deployed via Docker. CI pushes images to GHCR on push to `main`.
 
 **Environment Variables:**
 - `ENV`: Set to "prod" (default) or "dev"
-- `LOCATION`: Timezone (default: "Europe/Kyiv")
-
-**Note**: Lambda deployments typically use SSM for secrets. If you want to test Lambda locally with env vars, set `TODOIST_TOKEN`, `TELEGRAM_BOT_ID`, and `TELEGRAM_CHAT_ID` to skip SSM.
-
-### Daemon Deployment (EC2)
-The daemon binary can run on any Linux EC2 instance:
-
-**Environment Variables:**
-- `ENV`: Set to "prod" (default) or "dev"
-- `TODOIST_TOKEN`: Todoist API token (required for simple deployment, optional if using SSM)
-- `TELEGRAM_BOT_ID`: Telegram bot token (required for simple deployment, optional if using SSM)
-- `TELEGRAM_CHAT_ID`: Telegram chat ID (required for simple deployment, optional if using SSM)
+- `TODOIST_TOKEN`: Todoist API token (required)
+- `TELEGRAM_BOT_ID`: Telegram bot token (required)
+- `TELEGRAM_CHAT_ID`: Telegram chat ID (required)
 - `SCHEDULE`: Cron expression for notification schedule - defaults to "0 * 9-23 * * *" (every hour from 9am to 11pm)
   - Format: `minute hour day month weekday` (standard cron without seconds)
   - Examples:
@@ -168,74 +108,9 @@ The daemon binary can run on any Linux EC2 instance:
     - `"*/15 * * * *"` - Every 15 minutes (all day)
 - `LOCATION`: Timezone (default: "Europe/Kyiv")
 
-**Deployment Options:**
-
-**Option 1: Simple deployment with environment variables (recommended for non-AWS)**
+**Run with Docker Compose:**
 ```bash
-ENV=prod \
-SCHEDULE="0 * 9-23 * * *" \
-TODOIST_TOKEN=<token> \
-TELEGRAM_BOT_ID=<bot_id> \
-TELEGRAM_CHAT_ID=<chat_id> \
-./todoist-notifier-daemon
-```
-
-**Option 2: AWS deployment with SSM Parameter Store**
-- Attach IAM instance profile with `ssm:GetParameters` permission
-- Store secrets in SSM at `/todoist-notifier-bot/prod/{todoist-token,telegram-token,telegram-chat-id}`
-- Don't set `TODOIST_TOKEN`, `TELEGRAM_BOT_ID`, or `TELEGRAM_CHAT_ID` env vars (SSM will be used automatically)
-
-**Running as systemd service (simple deployment):**
-```ini
-[Unit]
-Description=Todoist Telegram Notifier
-After=network.target
-
-[Service]
-Type=simple
-User=your-user
-Environment="ENV=prod"
-Environment="SCHEDULE=0 * 9-23 * * *"
-Environment="LOCATION=Europe/Kyiv"
-Environment="TODOIST_TOKEN=your-token"
-Environment="TELEGRAM_BOT_ID=your-bot-id"
-Environment="TELEGRAM_CHAT_ID=your-chat-id"
-ExecStart=/usr/local/bin/todoist-notifier-daemon
-Restart=always
-RestartSec=10
-
-[Install]
-WantedBy=multi-user.target
-```
-
-**Running as systemd service (SSM deployment):**
-```ini
-[Unit]
-Description=Todoist Telegram Notifier
-After=network.target
-
-[Service]
-Type=simple
-User=ec2-user
-Environment="ENV=prod"
-Environment="SCHEDULE=0 * 9-23 * * *"
-Environment="LOCATION=Europe/Kyiv"
-ExecStart=/usr/local/bin/todoist-notifier-daemon
-Restart=always
-RestartSec=10
-
-[Install]
-WantedBy=multi-user.target
-```
-
-**With environment variables (deprecated, use Option 1 or 2 above):**
-```bash
-ENV=prod \
-SCHEDULE="0 * 9-23 * * *" \
-TODOIST_TOKEN=<token> \
-TELEGRAM_BOT_ID=<bot_id> \
-TELEGRAM_CHAT_ID=<chat_id> \
-./todoist-notifier-daemon
+TODOIST_TOKEN=<token> TELEGRAM_BOT_ID=<bot_id> TELEGRAM_CHAT_ID=<chat_id> make docker-up
 ```
 
 ## Development Notes
@@ -255,9 +130,9 @@ TELEGRAM_CHAT_ID=<chat_id> \
 
 **Current environment variables (all defined in Config struct):**
 - `ENV` → `Config.Dev` (bool) - defaults to false (prod mode)
-- `TODOIST_TOKEN` → `Config.TodoistToken` - required (via env or SSM)
-- `TELEGRAM_BOT_ID` → `Config.TelegramToken` - required (via env or SSM)
-- `TELEGRAM_CHAT_ID` → `Config.TelegramChatID` - required (via env or SSM)
+- `TODOIST_TOKEN` → `Config.TodoistToken` - required
+- `TELEGRAM_BOT_ID` → `Config.TelegramToken` - required
+- `TELEGRAM_CHAT_ID` → `Config.TelegramChatID` - required
 - `SCHEDULE` → `Config.Schedule` - defaults to "0 * 9-23 * * *" (every hour from 9am to 11pm)
 - `LOCATION` → `Config.Location` - defaults to "Europe/Kyiv"
 
@@ -266,7 +141,7 @@ TELEGRAM_CHAT_ID=<chat_id> \
 // ✅ GOOD - use config struct
 conf, err := internal.GetConfig(ctx)
 log := internal.NewLogger(conf.Dev)
-notifier, err := internal.NewNotifier(client, publisher, conf.TelegramChatID, conf.Location, log)
+bot, err := internal.NewBot(*conf, todoistClient, clock, log)
 
 // ❌ BAD - don't read env vars directly
 location := os.Getenv("LOCATION")
@@ -286,7 +161,7 @@ if location == "" {
 All required environment variables are validated in `GetConfig()`:
 - Missing required variables cause immediate failure with clear error message
 - Error lists all missing variables at once (not one at a time)
-- Validation happens for both env var mode and SSM mode
+- Validation happens after all config is loaded
 - The `validate()` method is called after all config is loaded
 
 ### Linting Configuration
@@ -382,7 +257,7 @@ log := internal.NewLogger(isDev)
 - Config is the single source of truth for environment determination
 - For config errors, use default `slog` package directly since we don't have config yet
 
-This ensures consistent logging configuration across all entry points (Lambda, daemon, dev tools).
+This ensures consistent logging configuration across all entry points.
 
 ### Context-Aware Logging
 
@@ -484,8 +359,6 @@ The notification system uses Todoist labels for time-based filtering:
 Tasks without time labels or with passed time labels appear in notifications.
 
 ### Code Reusability
-Both Lambda and daemon modes share the same core logic:
-- `internal/notifier.go` contains the shared `Notifier` type
-- `internal/lambda.go` is a thin wrapper for Lambda integration
-- `cmd/daemon/main.go` adds scheduler logic around the shared notifier
-- All notification logic (fetch, filter, render, send) is in one place
+- `internal/bot.go` contains the Telegram bot and notification sending logic
+- `cmd/daemon/main.go` adds scheduler logic around the bot
+- Task filtering, sorting, and message rendering are shared utilities in `internal/tasks.go`
