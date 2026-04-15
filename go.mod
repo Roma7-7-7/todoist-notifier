@@ -3,7 +3,7 @@ module github.com/Roma7-7-7/todoist-notifier
 go 1.26.2
 
 require (
-	github.com/go-co-op/gocron/v2 v2.20.0
+	github.com/go-co-op/gocron/v2 v2.21.0
 	gopkg.in/telebot.v3 v3.3.8
 )
 
