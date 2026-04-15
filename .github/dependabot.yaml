@@ -5,11 +5,9 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-    # Only raise PRs for minor and patch updates
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]
-    # Group all dependencies into a single PR
     groups:
       go-dependencies:
         patterns:
@@ -17,7 +15,6 @@ updates:
         update-types:
           - "minor"
           - "patch"
-    # Additional configuration options
     open-pull-requests-limit: 10
     labels:
       - "dependencies"
@@ -31,16 +28,26 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-    # Group all GitHub Actions updates into a single PR
     groups:
       github-actions:
         patterns:
           - "*"
-    # Additional configuration options
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 5
     labels:
       - "dependencies"
       - "github-actions"
     commit-message:
       prefix: "ci"
+      include: "scope"
+
+  # Docker
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "docker"
+    commit-message:
+      prefix: "docker"
       include: "scope"
