@@ -83,7 +83,7 @@ func FilterAndSortTasks(tasks []todoist.Task, now time.Time, filterByTime bool, 
 					res = append(res, t)
 				}
 			case P4:
-				if now.Hour() >= 21 { //nolint:mnd //
+				if now.Hour() >= 21 { //nolint:mnd // 9pm
 					res = append(res, t)
 				}
 			default:

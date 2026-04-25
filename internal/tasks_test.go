@@ -26,12 +26,20 @@ func TestFilterAndSortTasks_PriorityFiltering(t *testing.T) {
 			expected: []string{"P1 task at 9am"},
 		},
 		{
-			name: "P4 shows all the time",
+			name: "P4 filtered before 9pm",
 			tasks: []todoist.Task{
 				{ID: "2", Content: "P4 task at 9am", Priority: 1, Due: &todoist.TaskDue{Date: date}},
 			},
 			hour:     9,
-			expected: []string{"P4 task at 9am"},
+			expected: []string{},
+		},
+		{
+			name: "P4 shows after 9pm",
+			tasks: []todoist.Task{
+				{ID: "21", Content: "P4 task", Priority: 1, Due: &todoist.TaskDue{Date: date}},
+			},
+			hour:     21,
+			expected: []string{"P4 task"},
 		},
 		{
 			name: "P2 filtered before 3pm",
@@ -90,7 +98,7 @@ func TestFilterAndSortTasks_PriorityFiltering(t *testing.T) {
 				{ID: "12", Content: "P4 task", Priority: 1, Due: &todoist.TaskDue{Date: date}},
 			},
 			hour:     10,
-			expected: []string{"P1 task", "P4 task"},
+			expected: []string{"P1 task"},
 		},
 		{
 			name: "mixed priorities at 4pm",
@@ -101,7 +109,7 @@ func TestFilterAndSortTasks_PriorityFiltering(t *testing.T) {
 				{ID: "16", Content: "P4 task", Priority: 1, Due: &todoist.TaskDue{Date: date}},
 			},
 			hour:     16,
-			expected: []string{"P1 task", "P2 task", "P4 task"},
+			expected: []string{"P1 task", "P2 task"},
 		},
 		{
 			name: "mixed priorities at 7pm",
@@ -112,6 +120,17 @@ func TestFilterAndSortTasks_PriorityFiltering(t *testing.T) {
 				{ID: "20", Content: "P4 task", Priority: 1, Due: &todoist.TaskDue{Date: date}},
 			},
 			hour:     19,
+			expected: []string{"P1 task", "P2 task", "P3 task"},
+		},
+		{
+			name: "mixed priorities at 9pm",
+			tasks: []todoist.Task{
+				{ID: "22", Content: "P1 task", Priority: 4, Due: &todoist.TaskDue{Date: date}},
+				{ID: "23", Content: "P2 task", Priority: 3, Due: &todoist.TaskDue{Date: date}},
+				{ID: "24", Content: "P3 task", Priority: 2, Due: &todoist.TaskDue{Date: date}},
+				{ID: "25", Content: "P4 task", Priority: 1, Due: &todoist.TaskDue{Date: date}},
+			},
+			hour:     21,
 			expected: []string{"P1 task", "P2 task", "P3 task", "P4 task"},
 		},
 		{
@@ -124,7 +143,7 @@ func TestFilterAndSortTasks_PriorityFiltering(t *testing.T) {
 			},
 			hour:              19,
 			excludeProjectIDs: []string{"2", "3"},
-			expected:          []string{"P1 task", "P4 task"},
+			expected:          []string{"P1 task"},
 		},
 	}
 
