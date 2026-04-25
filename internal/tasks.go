@@ -72,7 +72,7 @@ func FilterAndSortTasks(tasks []todoist.Task, now time.Time, filterByTime bool, 
 			}
 		} else {
 			switch Priority(t.Priority) {
-			case P1, P4:
+			case P1:
 				res = append(res, t)
 			case P2:
 				if now.Hour() >= 15 { //nolint:mnd // 3pm
@@ -82,6 +82,12 @@ func FilterAndSortTasks(tasks []todoist.Task, now time.Time, filterByTime bool, 
 				if now.Hour() >= 18 { //nolint:mnd // 6pm
 					res = append(res, t)
 				}
+			case P4:
+				if now.Hour() >= 21 { //nolint:mnd // 9pm
+					res = append(res, t)
+				}
+			default:
+				res = append(res, t)
 			}
 		}
 	}
