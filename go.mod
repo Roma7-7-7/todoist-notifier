@@ -1,6 +1,6 @@
 module github.com/Roma7-7-7/todoist-notifier
 
-go 1.26.4
+go 1.26.5
 
 require (
 	github.com/go-co-op/gocron/v2 v2.21.1
